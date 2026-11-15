@@ -127,7 +127,11 @@ All POSTs need the `x-motion-token` header from `GET /api/session`.
 
 **⋯ → 版本与来源** opens the current model's versions and selects the current slot. Its compact header retains the model context; 已收录动作、公共动作包、骨架映射 and 素材来源 are secondary tabs. The everyday 动作库 remains the entry for browsing actions.
 
-`/` focuses the action search in 动作库 and opens the clip search in 修改. Inputs, IME and open dialogs own their keys. Arrow/Home/End keys navigate focused tablists before any frame-stepping shortcut. Narrow layouts expose 预览 / 动作 / 任务 / 记录 in a fixed navigation bar. 专注预览 expands the stage; Escape exits it.
+`/` focuses the action search in 动作库 and opens the clip search in 修改. Inputs, IME and open dialogs own their keys. Arrow/Home/End keys navigate focused tablists before any frame-stepping shortcut. Narrow layouts expose 预览 / 动作 / 任务 / 记录 in a fixed navigation bar.
+
+- Drag the handle below the viewport to change its height. Double-click the handle or press Home while it is focused to restore the default height. Up and Down also resize it.
+- 全屏预览 keeps the timeline, wireframe and annotation controls available. If browser fullscreen is unavailable, the preview fills the current tab. Use the same button or Escape to exit.
+- Drag with the left button to orbit, drag with the middle button to pan and scroll to zoom. Click to select a part. The viewport suppresses text selection, drag-and-drop and the page context menu.
 
 ## 返回与常用恢复
 

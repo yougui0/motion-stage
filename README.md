@@ -4,14 +4,18 @@
 
 在本机浏览器里查看 3D 角色和动作，暂停、标记问题，交给 AI Agent 修改，再把候选与原版并排比较。
 
-支持 GLB / FBX、兼容动作匹配、脚滑检查和多处画面标记。界面为中文。
+支持 GLB / FBX、兼容动作匹配、脚滑检查和多处画面标记。右上角「…」→「界面语言」可切换简体中文和 English。
+
+此 Fork 基于 [jbang2004/motion-stage](https://github.com/jbang2004/motion-stage)，增加了随动作变形的线框、画笔批注、中键平移、可调整大小的预览视窗和素材移除。
+
+MotionStage is a local 3D character and animation review workbench. Switch to English under **… → Interface language**. To start, clone this repository and run the command below with Node.js 22+ and a WebGL2 browser.
 
 ## 快速开始
 
 需要 **Node.js 22+** 和支持 **WebGL2** 的浏览器。运行时已随包提供，无需 `npm install`；预览和本地微调不需要 API Key。
 
 ```sh
-git clone https://github.com/jbang2004/motion-stage.git
+git clone https://github.com/yougui0/motion-stage.git
 cd motion-stage
 node skill/scripts/start.mjs
 ```

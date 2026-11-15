@@ -40,6 +40,7 @@
           <button id="openModelCatalog" role="menuitem" data-icon="folder"><span>项目文件</span><span id="modelCount" class="menu-meta">—</span></button>
           <button id="openEnvironment" role="menuitem" data-icon="shield"><span>环境检查</span></button>
           <hr>
+          <button id="openLanguage" role="menuitem"><span>界面语言</span><span id="activeLanguage" class="menu-meta" lang="zh-CN">简体中文</span></button>
           <button id="helpButton" role="menuitem" data-icon="help"><span>使用帮助</span></button>
         </div>
       </div>
@@ -65,7 +66,7 @@
       </div>
       <div class="stage-heading">
         <div class="asset-heading"><span id="stageEyebrow" class="eyebrow">当前素材</span><h1 id="clipTitle">正在载入角色…</h1><span id="roleName" class="asset-subtitle">本地工作空间</span></div>
-        <div class="stage-heading-actions"><select id="motionSelect" class="studio-only" aria-label="选择动作"><option>读取动作…</option></select><button id="editThisAction" type="button" class="edit-action library-only" data-icon="wand">修改这个动作</button><button id="openLibrary" class="icon-button" aria-label="素材详情" title="素材详情" data-icon="more"></button></div>
+        <div class="stage-heading-actions"><select id="motionSelect" class="studio-only" aria-label="选择动作"><option value="">读取动作…</option></select><button id="editThisAction" type="button" class="edit-action library-only" data-icon="wand">修改这个动作</button><button id="openLibrary" class="icon-button" aria-label="素材详情" title="素材详情" data-icon="more"></button></div>
       </div>
       <div class="recovery-bar" aria-label="预览与历史"><div role="group" aria-label="预览">
         <div class="stage-preview-modes" role="group" aria-label="主视窗模式">
@@ -79,10 +80,15 @@
       <div id="exampleBanner" class="example-banner" hidden><span>原创练习角色，试着收小一点左臂摆幅。</span><button id="importMine" class="text-button">导入我的角色 ↗</button></div>
       <div id="motionPreviewBar" class="mw-preview-bar" hidden aria-label="公共动作试播"></div>
       <div id="replacementPreviewBar" class="mw-preview-bar" hidden aria-label="替换动作对比"></div>
+      <section id="previewRegion" class="preview-region" aria-label="素材预览">
       <div class="preview-header studio-only">
         <div id="versionModes" class="version-modes" role="group" aria-label="查看版本"><button data-version="baseline" class="active">修改前</button><button data-version="candidate">修改后</button><button data-version="compare">并排对照</button></div>
         <div id="singleVersion" class="single-version">正在观察原版</div>
         <div class="preview-options"><button id="returnCurrent" class="text-button" hidden>↩ 返回当前素材</button><button id="openSettings" class="text-button" data-icon="sliders">视角与显示</button></div>
+      </div>
+      <div class="viewport-review-tools" role="group" aria-label="画面检查">
+        <button id="wireframeToggle" type="button" class="text-button" title="叠加跟随动作变形的三角网格" aria-pressed="false" disabled>线框</button>
+        <button id="annotateFrame" type="button" class="text-button" title="暂停并在当前画面上批注" disabled>画笔批注</button>
       </div>
       <div id="stage" class="stage" aria-label="模型三维预览" tabindex="-1">
         <div class="runtime-stage-layer">
@@ -94,21 +100,23 @@
           </div>
         </div>
         <div class="stage-vignette"></div>
-        <canvas id="canvas" aria-label="三维模型预览，点击身体定位，拖动旋转，滚轮缩放"></canvas>
+        <canvas id="canvas" aria-label="三维模型预览，左键点击选部位，左键拖动旋转，中键拖动平移，滚轮缩放"></canvas>
         <div id="surface-candidate" class="interaction-surface" data-slot="candidate"></div><div id="surface-baseline" class="interaction-surface" data-slot="baseline"></div>
         <div class="stage-corner top-left"><span class="live-dot"></span><span id="stageStatus">载入角色</span></div>
-        <div class="viewport-actions"><button id="focusPreview" class="viewport-icon" aria-label="专注预览" title="专注预览" aria-pressed="false" data-icon="expand"></button><button id="quickSnapshot" class="viewport-icon" aria-label="保存当前姿态四视图" title="保存四视图" data-icon="camera"></button><button id="quickFit" class="viewport-icon" aria-label="恢复预览构图" title="恢复构图" data-icon="fit"></button></div>
+        <div class="viewport-actions"><button id="focusPreview" type="button" class="viewport-icon" aria-label="全屏预览" title="全屏预览" aria-pressed="false" data-icon="expand"></button><button id="quickSnapshot" class="viewport-icon" aria-label="保存当前姿态四视图" title="保存四视图" data-icon="camera"></button><button id="quickFit" class="viewport-icon" aria-label="恢复预览构图" title="恢复构图" data-icon="fit"></button></div>
         <div id="candidateLabel" class="view-label candidate-label"><i></i><span>修改后<small id="candidateFile">—</small></span></div>
         <div id="baselineLabel" class="view-label baseline-label"><i></i><span>修改前<small id="baselineFile">—</small></span></div>
         <div id="stageDivider"></div>
         <div id="localPreviewBadge" class="stage-local-preview" hidden>微调试播</div>
-        <div class="stage-corner bottom-left"><span id="stageHint">拖动旋转 · 滚轮缩放 · 点击选部位</span></div>
+        <div class="stage-corner bottom-left"><span id="stageHint">左键拖动旋转 · 中键拖动平移 · 滚轮缩放 · 点击选部位</span></div>
         <div class="viewport-views" role="group" aria-label="快速切换视角"><button data-view="front" class="active">正面</button><button data-view="side">侧面</button><button data-view="back">背面</button><button data-view="top">俯视</button></div>
         <div class="stage-corner bottom-right"><span data-icon="cube"></span><span id="viewName">正面</span></div>
         <div id="selectionFloat" class="selection-float" hidden></div>
         <div id="stageLoading" class="stage-loading"><div class="loader-ring"></div><b>正在打开角色</b><span>素材与动作保留在本机</span></div>
+        <div id="stageEmpty" class="stage-error" hidden><span>工作区暂无素材</span><p>导入一个模型或动作，开始预览。</p><button id="importFromEmpty" type="button">导入素材</button></div>
         <div id="stageError" class="stage-error" role="alert" hidden><span id="stageErrorTitle">无法打开这个素材</span><p id="errorMessage"></p><button id="retryLoad">重新载入</button></div>
       </div>
+      <div id="previewResize" class="preview-resize" role="separator" aria-label="预览高度" aria-controls="stage" aria-orientation="horizontal" tabindex="0" title="拖动调整预览高度，双击恢复"></div>
       <section class="transport" aria-label="动画播放控制">
         <div class="timeline-ruler" aria-hidden="true"><span>0.00</span><span id="tickQuarter">—</span><span id="tickMid">—</span><span id="tickThreeQuarter">—</span><span id="tickEnd">—</span></div>
         <div class="timeline-wrap"><input id="timeline" type="range" min="0" max="1" step=".0001" value="0" aria-label="时间轴"><div id="scopeVisual" class="scope-visual" hidden></div></div>
@@ -130,6 +138,7 @@
       </section>
       <p id="observationConditions" class="observation-conditions studio-only" role="status"></p>
       <section id="footDiagnostics" class="foot-diagnostics studio-only" aria-label="脚底滑动诊断" hidden></section>
+      </section>
       <div class="stage-footnote"><span><span class="live-dot"></span>本地三维预览</span><span class="desktop-shortcuts"><kbd>空格</kbd> 播放 / 暂停 <span class="key-separator">·</span> <kbd>←</kbd><kbd>→</kbd> 逐帧</span><span class="touch-hint">拖动旋转 · 双指缩放 · 轻点选部位</span></div>
             <div id="notice" class="inline-notice" hidden role="status"></div>
     </main>
@@ -219,6 +228,16 @@
 </span>
 <span>↑</span>
 </button>
+<dialog id="languageDialog" class="compact-dialog" aria-labelledby="languageTitle">
+  <div class="dialog-heading">
+    <h2 id="languageTitle">界面语言</h2>
+    <button type="button" data-close class="icon-button" aria-label="关闭语言选择">×</button>
+  </div>
+  <div class="language-options">
+    <button type="button" data-language="zh-CN" lang="zh-CN" class="secondary-button" aria-pressed="true">简体中文</button>
+    <button type="button" data-language="en" lang="en" class="secondary-button" aria-pressed="false">English</button>
+  </div>
+</dialog>
 <dialog id="runtimePreviewDialog" class="runtime-preview-dialog" aria-labelledby="runtimePreviewTitle">
   <div class="dialog-heading">
     <div><span id="runtimePreviewCharacter" class="section-kicker"></span><h2 id="runtimePreviewTitle">游戏状态预览</h2></div>
@@ -324,7 +343,10 @@
 </p>
 <small id="assetStats">
 </small>
-<button id="assetInfo" class="text-button">素材信息 ↗</button>
+<div class="asset-summary-actions">
+<button id="assetInfo" type="button" class="text-button">素材信息 ↗</button>
+<button id="removeModel" type="button" class="text-button delete-model" disabled>删除素材…</button>
+</div>
 </div>
 <div class="library-tabs">
 <button id="clipsTab" class="active">动作 <span id="clipCount">0</span>
@@ -343,6 +365,16 @@
 </div>
 <button id="historyMore" class="secondary-button" hidden>加载更多记录</button>
 <button id="exportFeedback" class="text-button">导出完整反馈记录 ↓</button>
+</dialog>
+<dialog id="removeModelDialog" class="compact-dialog" aria-labelledby="removeModelTitle" aria-describedby="removeModelDescription">
+<div class="dialog-heading"><h2 id="removeModelTitle">删除素材？</h2></div>
+<p id="removeModelName" class="remove-model-name"></p>
+<p id="removeModelDescription">此素材及其自带动作将从工作区列表移除。磁盘源文件和修改记录会保留。</p>
+<p id="removeModelError" class="error-copy" role="alert" hidden></p>
+<div class="remove-model-actions">
+<button id="cancelRemoveModel" class="secondary-button" type="button" autofocus>取消</button>
+<button id="confirmRemoveModel" class="primary-button" type="button">删除素材</button>
+</div>
 </dialog>
 <dialog id="targetDialog" class="compact-dialog">
 <div class="dialog-heading">
@@ -407,6 +439,10 @@
 <label>
 <span>显示骨架</span>
 <input id="bones" type="checkbox">
+</label>
+<label for="wireframeMode">
+<span>网格叠加<small>显示当前姿势的三角网格，对照时两边同步</small></span>
+<select id="wireframeMode"><option value="off">关闭</option><option value="skin">实体＋蒙皮线框</option><option value="all">实体＋全部线框</option></select>
 </label>
 <label>
 <span>循环播放</span>
@@ -561,12 +597,32 @@
 <dialog id="feedbackPointDialog" class="compact-dialog" aria-labelledby="feedbackPointTitle">
   <div class="dialog-heading"><h2 id="feedbackPointTitle">标记当前画面</h2><button type="button" data-close class="icon-button" aria-label="关闭反馈标记">×</button></div>
   <p id="feedbackPointAnchor" class="feedback-points-hint"></p>
+  <section id="annotationEditor" hidden aria-label="画笔批注">
+    <div id="annotationToolbar" class="annotation-toolbar" role="group" aria-label="批注工具">
+      <button type="button" data-tool="pen" aria-pressed="true">画笔</button>
+      <button type="button" data-tool="arrow" aria-pressed="false">箭头</button>
+      <button type="button" data-tool="ellipse" aria-pressed="false">圈选</button>
+      <button type="button" data-ink="#e12939" title="红色" aria-label="红色" aria-pressed="true">红</button>
+      <button type="button" data-ink="#f3c016" title="黄色" aria-label="黄色" aria-pressed="false">黄</button>
+      <button type="button" data-ink="#2673ec" title="蓝色" aria-label="蓝色" aria-pressed="false">蓝</button>
+      <button type="button" data-ink="#ffffff" title="白色" aria-label="白色" aria-pressed="false">白</button>
+      <button type="button" id="annotationUndo" disabled>撤销一笔</button>
+      <button type="button" id="annotationClear" disabled>清空</button>
+    </div>
+    <canvas id="annotationCanvas" aria-label="当前冻结画面，绘制修改方向"></canvas>
+    <p id="annotationHint" class="feedback-points-hint" aria-live="polite"></p>
+  </section>
   <form id="feedbackPointForm" class="feedback-point-form">
     <label for="feedbackPointNote">这处想怎么改？</label>
     <textarea id="feedbackPointNote" maxlength="600" rows="4" placeholder="例如，抬手到这里时，手肘再收近身体一点。" required autofocus></textarea>
     <p id="feedbackPointError" class="error-copy" role="status" hidden></p>
-    <div class="feedback-point-actions"><button id="cancelFeedbackPoint" type="button" class="secondary-button">取消</button><button type="submit" class="primary-button">保存标记</button></div>
+    <div class="feedback-point-actions"><button id="cancelFeedbackPoint" type="button" class="secondary-button">取消</button><button id="saveFeedbackPoint" type="submit" class="primary-button">保存标记</button></div>
   </form>
+</dialog>
+<dialog id="annotationPreview" class="compact-dialog annotation-dialog" aria-labelledby="annotationPreviewTitle">
+  <div class="dialog-heading"><h2 id="annotationPreviewTitle">画面批注</h2><button type="button" data-close class="icon-button" aria-label="关闭批注预览">×</button></div>
+  <img id="annotationImage" alt="该反馈标记的冻结画面和笔迹">
+  <p id="annotationPreviewNote" class="feedback-points-hint"></p>
 </dialog>
 <div id="toast" role="status" hidden>
 </div>

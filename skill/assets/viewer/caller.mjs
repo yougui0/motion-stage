@@ -1,3 +1,5 @@
+import {t} from './i18n.mjs';
+
 // Routing metadata, not authentication or proof that a host can wake a chat.
 export function normalizeCaller(value){
  if(value==null)return null;
@@ -10,7 +12,7 @@ export function callerFromArgs(args){
  const client=read('--caller'),sessionId=read('--session'),model=read('--caller-model');
  return client===undefined&&sessionId===undefined&&model===undefined?null:normalizeCaller({client,sessionId,model});
 }
-export function callerLabel(caller){return ({codex:'Codex',claude:'Claude',deepseek:'DeepSeek',workbuddy:'WorkBuddy'})[caller?.client]||caller?.client||'当前对话';}
+export function callerLabel(caller){return ({codex:'Codex',claude:'Claude',deepseek:'DeepSeek',workbuddy:'WorkBuddy'})[caller?.client]||caller?.client||t('当前对话');}
 export function callerKey(caller){return caller?caller.client+':'+caller.sessionId:'';}
 export function restoredDelivery(saved,caller){return saved?.callerKey===callerKey(caller)&&saved.executionMode==='worker'?'worker':'chat';}
 export function assertCaller(expected,actual){

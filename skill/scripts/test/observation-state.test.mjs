@@ -2,6 +2,7 @@ import {currentComparison} from '../../assets/viewer/studio-sync.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import {t as localizeText} from '../../assets/viewer/i18n.mjs';
 import {readFile} from 'node:fs/promises';
 import {observationTime,planObservationRestore,restoredTransportTime,observationFrame,observationFrameOptions} from '../../assets/viewer/observation-state.mjs';
 import {createDemandLoop} from '../../assets/viewer/render-loop.mjs';
@@ -57,7 +58,7 @@ test('production snapshot application restores settings and camera FOV before de
  const state={models:structuredClone(models),playing:true},cameras={},controls={};let normalized=0;
  const vector=()=>({value:null,fromArray(a){this.value=[...a];}});
  for(const slot of ['baseline','candidate']){cameras[slot]={position:vector(),updateProjectionMatrix(){}};controls[slot]={target:vector(),update(){}};}
- const ctx=vm.createContext({state,slots:['baseline','candidate'],$,cameras,controls,planObservationRestore,restoredTransportTime,activeModel:()=>state.models.candidate,selectClip(slot,name){state.models[slot].clip=name;},normalizePair(){normalized++;},drawLoop(){},setViewButtons(){},restoreOfflinePreset(){}});
+ const ctx=vm.createContext({localizeText,state,slots:['baseline','candidate'],$,cameras,controls,planObservationRestore,restoredTransportTime,activeModel:()=>state.models.candidate,selectClip(slot,name){state.models[slot].clip=name;},normalizePair(){normalized++;},drawLoop(){},setViewButtons(){},restoreOfflinePreset(){}});
  vm.runInContext('let cameraBusy=false;'+extract('async function applyObservation(','\nasync function restoreContext('),ctx);
  await vm.runInContext('applyObservation',ctx)({slot:'candidate',time:1,mode:'progress',rootLocked:false,linkedCameras:false,speed:.5,loop:false,cameras:{candidate:{position:[2,3,4],target:[0,2,0],fov:55}}},{inputSlot:'candidate'});
  assert.equal(state.playing,false);assert.equal(state.display,'split');assert.equal(state.time,1); // new baseline duration is 4; source local second stays 1
@@ -68,13 +69,13 @@ test('production snapshot application restores settings and camera FOV before de
 test('retired asynchronous appearance restoration cannot apply settings to a newly selected model, including ABA',async()=>{
  const view=createViewState('A');view.markLoaded(view.beginLoad(),'A');let release,applications=0;
  const appearance={chooseRecorded:()=>new Promise(resolve=>{release=resolve;})},state={project:{activeAssetId:'A'}};
- const ctx=vm.createContext({state,viewState:view,appearance,applyObservation(){applications++;}});vm.runInContext(extract('async function restoreContext(','\nfunction viewMatchesJob('),ctx);
+ const ctx=vm.createContext({localizeText,state,viewState:view,appearance,applyObservation(){applications++;}});vm.runInContext(extract('async function restoreContext(','\nfunction viewMatchesJob('),ctx);
  const pending=vm.runInContext('restoreContext',ctx)({speed:.25});view.select('B');view.select('A');release(false);await pending;assert.equal(applications,0);
 });
 
 test('production pose sampling stays idle for appearance or camera redraws and invalidates after selection and display changes',()=>{
  let samples=0;const no=()=>{},m={action:null,frame:{},capabilities:{hasMesh:true},lines:{visible:false},points:{geometry:{}},nodeAxes:{},joints:[],marker:{visible:false}},state={models:{baseline:m},display:'single',target:null};
- const ctx=vm.createContext({slots:['baseline'],state,$:()=>({checked:false}),timeModel(){samples++;},localTime:()=>1});
+ const ctx=vm.createContext({localizeText,slots:['baseline'],state,$:()=>({checked:false}),timeModel(){samples++;},localTime:()=>1});
  vm.runInContext(extract('function pose(){','\nfunction drawModel('),ctx);const pose=vm.runInContext('pose',ctx);
  pose();pose();assert.equal(samples,1);state.target={slot:'candidate'};pose();assert.equal(samples,2);pose();assert.equal(samples,2);state.display='split';pose();assert.equal(samples,3);m.poseStamp=null;pose();assert.equal(samples,4);
 });
@@ -82,7 +83,7 @@ test('production pose sampling stays idle for appearance or camera redraws and i
 test('production candidate display restores the actual input observation only after its load is still current',async()=>{
  const source={sha256:'input'},candidate={sha256:'output'},job={id:'continued',assetId:'A',slot:'candidate',clip:'Run',inputs:{baseline:{sha256:'old'},candidate:source},candidate,context:{time:.75,mode:'progress',speed:.25,rootLocked:false,cameras:{candidate:{position:[3,2,1],target:[0,1,0]}}}};
  const view=createViewState('A');view.markLoaded(view.beginLoad(),'A');const state={project:{activeAssetId:'A',slots:{baseline:job.inputs.baseline,candidate}},models:{baseline:{meta:source},candidate:{meta:candidate}}},applied=[],noop=()=>{};let release;
- const ctx=vm.createContext({state,viewState:view,appearance:{},currentComparison,observationFrameOptions,renderLoop:null,jobSourceAsset:j=>j.inputs[j.slot],loadPair:async(_wanted,_force,current)=>{await new Promise(resolve=>{release=resolve;});return current();},applyObservation:(...args)=>applied.push(args),$:()=>({}),clearTarget:noop,correspondingJoint:()=>null,drawLibrary:noop,updateBoneChoices:noop,drawMetadata:noop,updateDisplay:noop,drawLatestJob:noop,render:noop,notice:noop,resourcePanels:{baseline:{observe:()=>null}}});
+ const ctx=vm.createContext({localizeText,state,viewState:view,appearance:{},currentComparison,observationFrameOptions,renderLoop:null,jobSourceAsset:j=>j.inputs[j.slot],loadPair:async(_wanted,_force,current)=>{await new Promise(resolve=>{release=resolve;});return current();},applyObservation:(...args)=>applied.push(args),$:()=>({}),clearTarget:noop,correspondingJoint:()=>null,drawLibrary:noop,updateBoneChoices:noop,drawMetadata:noop,updateDisplay:noop,drawLatestJob:noop,render:noop,notice:noop,resourcePanels:{baseline:{observe:()=>null}}});
  vm.runInContext(extract('async function showCandidate(','\nfunction currentJob('),ctx);const show=vm.runInContext('showCandidate',ctx);
  let pending=show(job);release();assert.equal(await pending,true);assert.equal(applied.length,1);assert.equal(applied[0][0],job.context);assert.equal(applied[0][1].inputSlot,'candidate');
  pending=show(job);view.select('B');release();assert.equal(await pending,false);assert.equal(applied.length,1);
@@ -97,7 +98,7 @@ test('continuing from a scaled candidate restores its frozen transform for both 
 });
 
 test('production frame policy includes paused project hooks and suspends the model during game preview',()=>{
- const state={ready:true,playing:false,models:{baseline:{}}},runtimePreviewDialog={open:false},runtimeStage={active:false},ctx=vm.createContext({state,runtimePreviewDialog,runtimeStage,duration:()=>2});
+ const state={ready:true,playing:false,models:{baseline:{}}},runtimePreviewDialog={open:false},runtimeStage={active:false},ctx=vm.createContext({localizeText,state,runtimePreviewDialog,runtimeStage,duration:()=>2});
  vm.runInContext('let appearanceRecovery=false;'+extract('function continuousFrames(){','\nlet lastDOM='),ctx);const active=vm.runInContext('continuousFrames',ctx);
  assert.equal(active(),false);state.playing=true;assert.equal(active(),true);state.playing=false;state.models.baseline.appearance={update(){}};assert.equal(active(),true);
  state.loading=true;assert.equal(active(),false);state.loading=false;state.capturing=true;assert.equal(active(),false);state.capturing=false;state.models.baseline.appearance={render(){}};assert.equal(active(),true);
@@ -108,19 +109,19 @@ test('production frame policy includes paused project hooks and suspends the mod
 test('project snapshot staging supplies the frozen transform before adapter preparation and rebuilds both handles',async()=>{
  const load=extract('async function loadPair(','\nfunction resolveClip('),box={min:{x:0,y:0,z:0},max:{x:2,y:4,z:2}},wanted={baseline:{sha256:'input'},candidate:{sha256:'output'}},state={models:{baseline:{meta:wanted.baseline},candidate:{meta:wanted.candidate}}},staged=[],frames=[];
  const options={scaleMode:'shared',normalization:{scale:.25,restOffset:[2,-1,0]}};
- const ctx=vm.createContext({slots:['baseline','candidate'],state,cacheKey:()=>'',recentModels:new Map(),setModelClip(){},retireModel(){},pairFrame:(models,options)=>observationFrame(models.baseline.bbox,options?.scaleMode,options?.normalization),observationFrame,$:()=>({value:'raw'}),appearance:{mode:'project',async prepare(models){assert.equal(models.length,2);assert.ok(models.every(m=>m.frame.factor===.25));assert.ok(models.every(m=>m.frame.offset[0]===2));return 'ready';}},loadSlot:async(slot,meta)=>{const m={meta,clips:[],bbox:box,capabilities:{hasMesh:true},appearanceContext:{camera:{}}};staged.push(m);return m;},normalize:(m,frame)=>m.frame=frame,normalizePair:(_models,frameOptions)=>frames.push(frameOptions),renderer:{debug:{},compile(){}},T:{},withRendererState:(_r,_t,run)=>run(),dispose(){},commitModel:(slot,m)=>state.models[slot]=m});
+ const ctx=vm.createContext({localizeText,slots:['baseline','candidate'],state,cacheKey:()=>'',recentModels:new Map(),setModelClip(){},retireModel(){},pairFrame:(models,options)=>observationFrame(models.baseline.bbox,options?.scaleMode,options?.normalization),observationFrame,$:()=>({value:'raw'}),appearance:{mode:'project',async prepare(models){assert.equal(models.length,2);assert.ok(models.every(m=>m.frame.factor===.25));assert.ok(models.every(m=>m.frame.offset[0]===2));return 'ready';}},loadSlot:async(slot,meta)=>{const m={meta,clips:[],bbox:box,capabilities:{hasMesh:true},appearanceContext:{camera:{}}};staged.push(m);return m;},normalize:(m,frame)=>m.frame=frame,normalizePair:(_models,frameOptions)=>frames.push(frameOptions),renderer:{debug:{},compile(){}},T:{},withRendererState:(_r,_t,run)=>run(),dispose(){},commitModel:(slot,m)=>state.models[slot]=m});
  vm.runInContext(load,ctx);assert.equal(await vm.runInContext('loadPair',ctx)(wanted,false,()=>true,options),true);assert.equal(staged.length,2);assert.equal(frames[0],options);
 });
 
 test('an equal file hash in another model cannot borrow the prior model frozen display transform',()=>{
  const box={min:{x:0,y:0,z:0},max:{x:2,y:4,z:2}},state={project:{activeAssetId:'B'},observationTransform:{sha256:'equal',assetId:'A',scale:10,restOffset:[1,2,3]}};
- const ctx=vm.createContext({state,observationFrame,$:()=>({value:'shared'})});vm.runInContext(extract('function recordedFrame(','\nasync function loadSlot('),ctx);
+ const ctx=vm.createContext({localizeText,state,observationFrame,$:()=>({value:'shared'})});vm.runInContext(extract('function recordedFrame(','\nasync function loadSlot('),ctx);
  const frame=vm.runInContext('pairFrame',ctx)({baseline:{meta:{sha256:'equal',assetId:'B'},bbox:box}});assert.equal(frame.factor,.5);assert.equal(frame.offset[1],-0);
 });
 
 test('manual scale switching rebuilds project normalization caches and cannot refit a superseding load',async()=>{
  const body=extract("$('scaleMode').onchange=", "$('progress').onchange="),field={},state={view:'side',observationTransform:{scale:10}},viewState=createViewState('A');viewState.markLoaded(viewState.beginLoad(),'A');let release,fit=0,rebuilt=0;
- const ctx=vm.createContext({state,viewState,$:()=>field,appearance:{mode:'project'},refreshModels:async({force})=>{assert.equal(force,true);rebuilt++;const ticket=viewState.beginLoad();await new Promise(resolve=>release=resolve);return {observationTicket:ticket};},normalizePair(){assert.fail('Project adapters must be rebuilt');},view:()=>fit++,fail:assert.fail});
+ const ctx=vm.createContext({localizeText,state,viewState,$:()=>field,appearance:{mode:'project'},refreshModels:async({force})=>{assert.equal(force,true);rebuilt++;const ticket=viewState.beginLoad();await new Promise(resolve=>release=resolve);return {observationTicket:ticket};},normalizePair(){assert.fail('Project adapters must be rebuilt');},view:()=>fit++,fail:assert.fail});
  vm.runInContext(body,ctx);let pending=field.onchange();release();await pending;assert.equal(state.observationTransform,null);assert.equal(rebuilt,1);assert.equal(fit,1);
  pending=field.onchange();viewState.beginLoad();release();await pending;assert.equal(fit,1);
 });

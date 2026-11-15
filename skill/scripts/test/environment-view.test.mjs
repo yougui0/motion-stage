@@ -4,6 +4,7 @@ import {createDocument} from './viewer-dom-fixture.mjs';
 import {createEnvironmentPanel} from '../../assets/viewer/environment-view.mjs';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
+import {t as localizeText} from '../../assets/viewer/i18n.mjs';
 import {element} from '../../assets/viewer/ui.mjs';
 
 const report=()=>({node:{version:'22.0.0',supported:true},workspace:{status:'ready'},server:{status:'ready'},blender:{status:'not-checked'},codex:{status:'not-checked'}});
@@ -18,7 +19,7 @@ test('the production renderer failure leaves diagnostics and page recovery contr
  const source=await readFile(new URL('../../assets/viewer/app.js',import.meta.url),'utf8');
  const code=source.slice(source.indexOf("const canvas=$('canvas');let renderer;"),source.indexOf('if(renderer){renderer.setPixelRatio('));assert.ok(code.length>0);
  let failures=0,reloads=0;
- const context=vm.createContext({T:{WebGLRenderer:class{constructor(){throw Error('GPU denied');}}},$:id=>document.getElementById(id),environmentPanel:h.panel,el:(tag,text)=>element(tag,text,'',document),fail:()=>failures++,location:{reload:()=>reloads++}});
+ const context=vm.createContext({localizeText,T:{WebGLRenderer:class{constructor(){throw Error('GPU denied');}}},$:id=>document.getElementById(id),environmentPanel:h.panel,el:(tag,text)=>element(tag,text,'',document),fail:()=>failures++,location:{reload:()=>reloads++}});
  document.getElementById('canvas').addEventListener=()=>{};assert.doesNotThrow(()=>vm.runInContext(code,context));assert.equal(failures,0);
  await h.button.onclick();assert.equal(h.dialog.open,true);assert.equal(h.reload.hidden,false);assert.match(h.body.textContent,/WebGL2 不可用/);
  h.reload.onclick();assert.equal(h.reloads,1);

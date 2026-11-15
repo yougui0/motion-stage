@@ -161,6 +161,10 @@ body[data-mode="studio"] .library-only { display: none !important; }
 .popover-menu .menu-meta { margin-left: auto; font-size: 12px; color: var(--ms-label-3); }
 .popover-menu button:hover .menu-meta { color: rgba(255, 255, 255, .8); }
 .popover-menu hr { margin: 5px 8px; border: 0; border-top: 1px solid var(--ms-separator); }
+:lang(en) .brand-copy small { display: none; }
+.language-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.language-options button { flex: 1 1 auto; }
+.language-options [aria-pressed="true"] { border-color: var(--ms-accent); color: var(--ms-accent); }
 @keyframes ms-pop { from { opacity: 0; transform: scale(.94) translateY(-4px); } to { opacity: 1; transform: none; } }
 
 /* ------------------------------------------------------------- cast rail */
@@ -700,7 +704,6 @@ body[data-mode="library"] .view-label, body[data-mode="library"] #stageDivider {
   .asset-subtitle { display: block; max-width: 58vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .edit-action { padding: 6px 12px; font-size: 12px; }
   .edit-action .icon { display: none; }
-  .stage-heading-actions .icon-button { display: none; }
   .stage-heading-actions { flex-wrap: wrap; justify-content: flex-end; }
   .stage { flex: none; height: min(64vh, 520px); min-height: 320px; border-radius: 18px; }
   .stage-footnote { display: none; }
@@ -824,11 +827,6 @@ button.feedback-point-jump:hover, .feedback-point-jump[aria-current] { border-co
 .observation-conditions { color: var(--ms-label-3); font-size: 12px; }
 #menuHistory { display: none; }
 .mobile-workspace-nav { display: none; }
-.preview-focused .app-shell { grid-template-columns: minmax(0,1fr); }
-.preview-focused .cast-rail, .preview-focused .action-browser, .preview-focused .task-panel { display: none !important; }
-.preview-focused .workflow-header, .preview-focused .example-banner { display: none !important; }
-.preview-focused .stage-column { width: 100%; }
-.preview-focused #focusPreview { background: var(--ms-accent); color: #fff; }
 
 /* Advanced sources are contextual tools, without a second landing page. */
 .motion-workspace { --mw-accent: var(--ms-accent); background: var(--ms-canvas); color: var(--ms-label); }
@@ -871,7 +869,6 @@ button.feedback-point-jump:hover, .feedback-point-jump[aria-current] { border-co
   .task-footer { padding: 8px 0; }
   .mw-context { flex-direction: column; align-items: flex-start; padding: 12px 16px; }
   .mw-top, .mw-toolbar { padding: 12px 16px; }.mw-content { padding: 8px 16px 20px; }
-  .preview-focused .stage { height: calc(100dvh - 260px); }
 }
 
 .compose-actions { flex: none; background: var(--ms-surface); border-top: 1px solid var(--ms-separator); padding: 10px 0; }
@@ -898,7 +895,7 @@ button.feedback-point-jump:hover, .feedback-point-jump[aria-current] { border-co
 #toast{display:flex;align-items:center;gap:16px}
 #toast[hidden]{display:none}
 #toast button{min-width:44px;min-height:44px;color:inherit;font-weight:650}
-@media(max-width:760px){.recovery-bar{margin-bottom:4px;gap:0}.recovery-bar button{padding:8px 7px;font-size:11px}.recovery-bar>div{gap:0}.inspector-heading #backFromCompose{padding-left:0}}
+@media(max-width:760px){:lang(en) .recovery-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start}:lang(en) .recovery-bar>div:first-child{flex-wrap:wrap}.recovery-bar{margin-bottom:4px;gap:0}.recovery-bar button{padding:8px 7px;font-size:11px}.recovery-bar>div{gap:0}.inspector-heading #backFromCompose{padding-left:0}}
 
 .review-actions button:only-child{grid-column:1 / -1}
 
@@ -906,6 +903,43 @@ button.feedback-point-jump:hover, .feedback-point-jump[aria-current] { border-co
 @media(max-width:760px){.task-recovery{display:flex;margin-left:auto;gap:2px}.task-recovery button{width:44px;height:44px;padding:0;font-size:23px}.task-recovery button:disabled{opacity:.32}.inspector-heading #backFromCompose{margin-right:4px}}
 
 @media(max-width:430px){.transport-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px}.transport-row #clock{text-align:center}.transport-row>select{margin-left:0;min-height:44px}.play-controls .icon-button{width:44px;min-width:44px;min-height:44px}.transport-edit{grid-column:1 / -1;justify-self:end}.task-recovery .icon{width:20px;height:20px}}
+
+.preview-region { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.preview-region[data-resized] { flex: none; }
+.preview-region[data-resized] .stage { flex: none; height: var(--preview-height); min-height: 0; }
+.stage-column:has(.preview-region[data-resized]) { overflow-y: auto; }
+.stage, .stage * { -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }
+.preview-resize {
+  display: grid; place-items: center; flex: 0 0 16px; cursor: ns-resize;
+  touch-action: none; user-select: none; border-radius: 6px;
+}
+.preview-resize::after {
+  content: ''; width: 36px; height: 4px; border-radius: 4px; background: var(--ms-label-4);
+}
+.preview-resize:hover::after, .preview-resize:focus-visible::after { background: var(--ms-accent); }
+.preview-resize + .transport { padding-top: 0; }
+.preview-region.preview-expanded {
+  position: fixed; inset: 0; z-index: 90; width: 100%; height: 100%; box-sizing: border-box;
+  padding: clamp(8px, 1.4vw, 22px); overflow: auto; background: var(--ms-canvas);
+}
+.preview-region.preview-expanded .stage { flex: 1 0 0; height: auto; min-height: 120px; }
+.preview-expanded .preview-resize { display: none; }
+.preview-expanded .transport { padding-top: 8px; }
+.preview-expanded .observation-conditions { margin-bottom: 0; }
+.preview-expanded .foot-diagnostics { max-height: min(200px, 28dvh); overflow: auto; }
+.preview-expanded #focusPreview { background: var(--ms-accent); color: #fff; }
+body.preview-window { overflow: hidden; }
+.preview-window :is(.topbar, .cast-rail, .action-browser, .task-panel, .mobile-workspace-nav, .stage-column > :not(.preview-region)) {
+  visibility: hidden;
+}
+@media (pointer: coarse) {
+  .preview-resize { flex-basis: 24px; }
+}
+@media (max-width: 760px) {
+  .preview-expanded .preview-header { padding-block: 0; margin-bottom: 4px; }
+  .preview-expanded .viewport-review-tools { margin-bottom: 2px; }
+  .preview-expanded .observation-conditions { margin-top: 4px; }
+}
 
 /* Replacement controls are siblings of the play button, including on touch. */
 .ab-action-item { min-width: 0; display: flex; flex-direction: column; border-radius: 12px; }

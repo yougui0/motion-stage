@@ -1,3 +1,4 @@
+import {t as localizeText} from './i18n.mjs';
 export function createPreviewLease({renew, release, onExpired}) {
  let lease, heartbeat;
  function end() {
@@ -33,10 +34,10 @@ export function createRuntimePreview({button, dialog, title, status, mode, selec
  let request, states = [], applying = false;
  const lease = createPreviewLease({renew, release, onExpired: () => {
   states = [];
-  select.replaceChildren(new Option('选择一个状态', ''));
+  select.replaceChildren(new Option(localizeText("选择一个状态"), ''));
   select.disabled = true;
   showState();
-  status.textContent = '预览服务已停止，点刷新状态可重新连接。';
+  status.textContent = localizeText("预览服务已停止，点刷新状态可重新连接。");
  }});
  const offline = () => mode.value === 'offline';
  const selected = () => states.find(item => item.id === select.value);
@@ -63,18 +64,18 @@ export function createRuntimePreview({button, dialog, title, status, mode, selec
   const controller = new AbortController();
   request = controller;
   states = [];
-  select.replaceChildren(new Option('选择一个状态', ''));
+  select.replaceChildren(new Option(localizeText("选择一个状态"), ''));
   select.disabled = true;
   showState();
-  title.textContent = asset?.name || '当前角色';
+  title.textContent = asset?.name || localizeText("当前角色");
   if (!asset?.id) {
-   status.textContent = '请先打开项目里的角色';
+   status.textContent = localizeText("请先打开项目里的角色");
    return;
   }
   const local = offline();
   if (local) lease.end();
   const id = local ? null : crypto.randomUUID();
-  status.textContent = local ? '正在读取离线状态…' : '正在连接游戏预览服务…';
+  status.textContent = local ? localizeText("正在读取离线状态…") : localizeText("正在连接游戏预览服务…");
   try {
    const result = await loadStates(asset.id, local, controller.signal, id);
    if (controller.signal.aborted || !dialog.open || currentAsset()?.id !== asset.id) {
@@ -89,12 +90,12 @@ export function createRuntimePreview({button, dialog, title, status, mode, selec
    const preset = local ? currentPreset() : null;
    if (preset && states.some(state => state.id === preset.id)) select.value = preset.id;
    showState();
-   status.textContent = result.message || (preset ? '当前离线状态 · ' + preset.label :
-    local ? '选择一个状态，在动作台播放和比较。' : '选择一个状态，由游戏服务渲染预览。');
+   status.textContent = result.message || (preset ? localizeText("当前离线状态 · ") + preset.label :
+    local ? localizeText("选择一个状态，在动作台播放和比较。") : localizeText("选择一个状态，由游戏服务渲染预览。"));
   } catch (error) {
    if (!controller.signal.aborted && dialog.open) {
     lease.end();
-    status.textContent = error.message || '无法读取游戏状态，请刷新重试';
+    status.textContent = error.message || localizeText("无法读取游戏状态，请刷新重试");
    }
   }
  }
@@ -104,7 +105,7 @@ export function createRuntimePreview({button, dialog, title, status, mode, selec
   applying = true;
   mode.disabled = refresh.disabled = select.disabled = true;
   showState();
-  status.textContent = '正在应用状态…';
+  status.textContent = localizeText("正在应用状态…");
   try {
    await applyPreset(preset);
    dialog.close();

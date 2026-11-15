@@ -16,6 +16,7 @@ import {readJobIndex} from './job-index.mjs';
 import {undoGuard,appendUndo,advanceUndo} from './undo.mjs';
 import {sideConflict,SIDE_NAMES} from '../assets/viewer/body-side.mjs';
 import {validateFeedbackPoints} from '../assets/viewer/feedback-points.mjs';
+import {annotationFile,verifyAnnotationSnapshots} from './annotation-snapshots.mjs';
 import {validateFootRepair} from '../assets/viewer/foot-repair.mjs';
 
 const ID=/^[a-f0-9-]{36}$/;
@@ -148,6 +149,7 @@ export async function validateJobs(work){
   if(!j.scope||!Number.isFinite(j.scope.start)||!Number.isFinite(j.scope.end)||j.scope.start<0||j.scope.end<j.scope.start||j.scope.end>(clip?.duration||0)+.001)throw Error('任务时间范围无效：'+j.id);
   await readFile(await inside(work,j.taskFile));const context=await json(await inside(work,'jobs/'+j.id+'/context.json'));
   const points=validateFeedbackPoints(j.feedbackPoints,{sha:j.inputs[j.slot].sha256,clip:j.clip,duration:clip?.duration||0,scope:j.scope});
+  await verifyAnnotationSnapshots(work,points);
   if(!isDeepStrictEqual(points,context.feedbackPoints??[]))throw Error('任务反馈标记与冻结现场不一致：'+j.id);
   if(j.footRepair||context.footRepair){
    validateFootRepair(j.footRepair,{sha:j.inputs[j.slot].sha256,clip:j.clip,duration:clip?.duration||0,scope:j.scope});
@@ -225,10 +227,11 @@ export async function diagnoseFootSlip(work,{assetId,clip,versions,jobId}={}){
 }
 
 const sideNote=c=>`左右提示：要求写的是${SIDE_NAMES[c.requested]}侧，页面选中的却是角色${SIDE_NAMES[c.picked]}侧的 ${c.bone}${c.inferred?'（由点击位置推断）':''}。左右按角色自身朝向；用户可能按画面方向描述。先结合截图与文字确定是哪一侧；仍不确定时用 needs-input 询问，不要两侧都改。`;
-function feedbackSection(points){
+function feedbackSection(points,work){
  if(!points?.length)return '';
  return '本轮反馈标记（按编号逐条处理；每条的镜头与部位见 context.json）：\n'+points.map((p,i)=>
-  (i+1)+'. '+p.time.toFixed(3)+' 秒 · '+(p.target?.bone||p.target?.mesh||'整个动作')+'\n   '+p.note.replaceAll('\n','\n   ')
+  (i+1)+'. '+p.time.toFixed(3)+' 秒 · '+(p.target?.bone||p.target?.mesh||'整个动作')+'\n   '+p.note.replaceAll('\n','\n   ')+
+  (p.annotation?'\n   画笔批注截图（该标记的时刻和镜头）：'+resolve(work,annotationFile(p.annotation.snapshot)):'')
  ).join('\n')+'\n\n';
 }
 function footRepairSection(repair){
@@ -238,7 +241,7 @@ function footRepairSection(repair){
   :'模拟角色移动速度未填写。原地动作先核对游戏跑速、播放倍率和前进方向。';
  return '## 脚滑修复证据\n\n脚节点 '+repair.foot+'（索引 '+repair.nodeIndex+'），着地观测区间 '+repair.time.join('–')+' 秒。修改前素材漂移 '+repair.before.raw+' 场景单位。'+motion+'\n使用相同脚节点和观测区间评估候选。将实际修改限制在任务范围内，利用观测区间外的预留帧平滑衔接。保留根位移、其他动作及非目标肢体。\n\n';
 }
-function makeTask(j,work){return `# 动作修改任务 ${j.id}\n\n路径说明：绝对路径记录创建时的位置。工程搬迁后，以 CLI job 返回的 executionPaths 为当前入口，相对资产路径仍以当前工作区为根。\n\n处理来源：${callerLabel(j.caller)}${j.caller?'；会话 '+j.caller.sessionId+'；仅路由绑定，不代表已唤醒客户端。':''}\n\n用户要求：\n${j.request}\n\n${feedbackSection(j.feedbackPoints)}${footRepairSection(j.footRepair)}${j.clarifications?.length?"补充说明：\n"+j.clarifications.map(c=>"- "+c.message).join("\n")+"\n\n":""}${j.lockOtherClips?'保护范围：仅允许修改当前动作。其他动作不得新增、删除或修改轨道。\n':''}保留条件：\n${j.preserve||'用户未额外指定；保留任务范围外的数据，先判断责任层。'}\n\n冻结源文件：${resolve(work,j.inputs[j.slot].file)}\n源文件 SHA-256：${j.inputs[j.slot].sha256}\n模型 ID：${j.assetId||'legacy'}\n模型版本修订：${j.modelRevision??'旧任务'}\n版本槽：${j.slot}\n动作：${j.clip||'静态模型'}\n查看时刻：${j.context.time??0} 秒。审阅帧号仅为 UI 步进单位，不是源 Blender 帧号。\n预览外观：${j.context?.appearance?.mode==='project'?'项目适配包 '+j.context.appearance.bundle:'中性检查'}\n范围：${JSON.stringify(j.scope)}\n目标：${JSON.stringify(j.target)}\n${j.sideConflict?sideNote(j.sideConflict)+'\n':''}上下文：${resolve(work,'jobs',j.id,'context.json')}\n${j.projectContextFile?'项目与连续修改上下文：'+resolve(work,j.projectContextFile)+'\n说明：'+resolve(work,j.projectContextMarkdown)+'\n':''}${j.screenshot?'观察截图：'+resolve(work,j.screenshot)+'\n':''}\n此任务由页面中的明确提交产生。界面选区本身不扩大修改授权。观察截图、来源映射、身体部位、时间和镜头必须结合起来解释；屏幕点不等于已确认骨骼。\n\n## 执行与回传\n\n先读取本 Skill 的 SKILL.md 和任务 context.json。检查源资产内部骨架、静止姿势、权重、动作曲线或制作源；选择实际负责的层。先 claim，保留返回的 lease。所有候选和脚本放在 claim 返回的 executionPaths.outputDirectory 中；每次执行目录独立，保留原始资产及旧产物。无法唯一确定意图时标记 needs-input，并给用户一个具体问题。\n\nCLI：\n${claimCommand(work,j)} --owner agent\n（--owner 可换成你的 Agent 名称，例如 claude-code、codex；只用于记录谁领取了任务。）\n\n修改完成后验证目标变化和保护范围，另存自包含 candidate.glb。回传：\nnode ${quote(resolve(ROOT,'scripts/motion-feedback.mjs'))} complete --workspace ${quote(work)} --job ${j.id} --lease CLAIM_RETURNED_LEASE --candidate /absolute/path/candidate.glb --summary '实际修改和验证范围'\n\n只在实际执行并检查后标记完成。若已由 worker claim，使用它给出的租约，不重复 claim。技术检查不代表用户艺术认可；回传候选不安装正式游戏。\n`;
+function makeTask(j,work){return `# 动作修改任务 ${j.id}\n\n路径说明：绝对路径记录创建时的位置。工程搬迁后，以 CLI job 返回的 executionPaths 为当前入口，相对资产路径仍以当前工作区为根。\n\n处理来源：${callerLabel(j.caller)}${j.caller?'；会话 '+j.caller.sessionId+'；仅路由绑定，不代表已唤醒客户端。':''}\n\n用户要求：\n${j.request}\n\n${feedbackSection(j.feedbackPoints,work)}${footRepairSection(j.footRepair)}${j.clarifications?.length?"补充说明：\n"+j.clarifications.map(c=>"- "+c.message).join("\n")+"\n\n":""}${j.lockOtherClips?'保护范围：仅允许修改当前动作。其他动作不得新增、删除或修改轨道。\n':''}保留条件：\n${j.preserve||'用户未额外指定；保留任务范围外的数据，先判断责任层。'}\n\n冻结源文件：${resolve(work,j.inputs[j.slot].file)}\n源文件 SHA-256：${j.inputs[j.slot].sha256}\n模型 ID：${j.assetId||'legacy'}\n模型版本修订：${j.modelRevision??'旧任务'}\n版本槽：${j.slot}\n动作：${j.clip||'静态模型'}\n查看时刻：${j.context.time??0} 秒。审阅帧号仅为 UI 步进单位，不是源 Blender 帧号。\n预览外观：${j.context?.appearance?.mode==='project'?'项目适配包 '+j.context.appearance.bundle:'中性检查'}\n范围：${JSON.stringify(j.scope)}\n目标：${JSON.stringify(j.target)}\n${j.sideConflict?sideNote(j.sideConflict)+'\n':''}上下文：${resolve(work,'jobs',j.id,'context.json')}\n${j.projectContextFile?'项目与连续修改上下文：'+resolve(work,j.projectContextFile)+'\n说明：'+resolve(work,j.projectContextMarkdown)+'\n':''}${j.screenshot?'观察截图：'+resolve(work,j.screenshot)+'\n':''}\n此任务由页面中的明确提交产生。界面选区本身不扩大修改授权。观察截图、来源映射、身体部位、时间和镜头必须结合起来解释；屏幕点不等于已确认骨骼。\n\n## 执行与回传\n\n先读取本 Skill 的 SKILL.md 和任务 context.json。检查源资产内部骨架、静止姿势、权重、动作曲线或制作源；选择实际负责的层。先 claim，保留返回的 lease。所有候选和脚本放在 claim 返回的 executionPaths.outputDirectory 中；每次执行目录独立，保留原始资产及旧产物。无法唯一确定意图时标记 needs-input，并给用户一个具体问题。\n\nCLI：\n${claimCommand(work,j)} --owner agent\n（--owner 可换成你的 Agent 名称，例如 claude-code、codex；只用于记录谁领取了任务。）\n\n修改完成后验证目标变化和保护范围，另存自包含 candidate.glb。回传：\nnode ${quote(resolve(ROOT,'scripts/motion-feedback.mjs'))} complete --workspace ${quote(work)} --job ${j.id} --lease CLAIM_RETURNED_LEASE --candidate /absolute/path/candidate.glb --summary '实际修改和验证范围'\n\n只在实际执行并检查后标记完成。若已由 worker claim，使用它给出的租约，不重复 claim。技术检查不代表用户艺术认可；回传候选不安装正式游戏。\n`;
 }
 export async function createJob(work,input){return withWorkspaceLock(work,async()=>{
  const cfg=await readProject(work),ctx=structuredClone(input.context||{}),assetId=input.assetId||ctx.assetId||cfg.activeAssetId,heads=modelSlots(cfg,assetId),slot=input.slot||ctx.slot||(ctx.displayMode==='comparison'?'candidate':'baseline'),a=heads[slot];
@@ -258,6 +261,7 @@ export async function createJob(work,input){return withWorkspaceLock(work,async(
  const scope={start:0,end:c?.duration||0,wholeClip:true,...input.scope};
  if(!Number.isFinite(scope.start)||!Number.isFinite(scope.end)||scope.start<0||scope.end<scope.start||scope.end>(c?.duration||0)+.001)throw Error('时间范围无效');
  const feedbackPoints=validateFeedbackPoints(input.feedbackPoints,{sha:a.sha256,clip,duration:c?.duration||0,scope});
+ await verifyAnnotationSnapshots(work,feedbackPoints);
  const footRepair=validateFootRepair(input.footRepair,{sha:a.sha256,clip,duration:c?.duration||0,scope});
  if(footRepair){
   if(input.executor==='local')throw Error('脚滑修复需要由 Agent 处理。');

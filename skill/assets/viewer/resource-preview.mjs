@@ -1,3 +1,4 @@
+import {t as localizeText} from './i18n.mjs';
 import {resourceCapabilities,curveDescriptor,curveClips} from './resource-capabilities.mjs';
 
 // Use only the scene and transforms authored in the resource. No template rig.
@@ -14,10 +15,10 @@ export async function prepareResource(gltf,T,clipMetadata){
  root.traverse(o=>{if(o.isMesh){meshes.push(o);for(const b of o.skeleton?.bones||[])add(b);}const index=gltf.parser.associations?.get(o)?.nodes;if(o.isBone||indices.has(index)&&o!==root&&!o.isMesh||!capabilities.hasMesh&&index!==undefined)add(o);});
  // Segmented models can animate real transform nodes without a skin.
  for(const clip of gltf.animations)for(const track of clip.tracks){const binding=T.PropertyBinding.parseTrackName(track.name),node=root.getObjectByName(binding.nodeName);if(node&&node!==root&&!node.isMesh)add(node);}
- if(joints.length>5000)throw Error('节点预览超过 5000 个可交互节点，请导出所需骨架或拆分资源；已有版本保持。');
+ if(joints.length>5000)throw Error(localizeText("节点预览超过 5000 个可交互节点，请导出所需骨架或拆分资源；已有版本保持。"));
  const bbox=new T.Box3();if(meshes.length)bbox.setFromObject(root);else for(const node of joints)bbox.expandByPoint(node.getWorldPosition(new T.Vector3()));
  if(bbox.isEmpty())bbox.expandByPoint(new T.Vector3());const span=bbox.getSize(new T.Vector3()),height=span.y>1e-6?span.y:Math.max(span.x,span.z,1);
- if(![...bbox.min.toArray(),...bbox.max.toArray(),height].every(Number.isFinite))throw Error('资源的空间变换无效');
+ if(![...bbox.min.toArray(),...bbox.max.toArray(),height].every(Number.isFinite))throw Error(localizeText("资源的空间变换无效"));
  const curves=await Promise.all((curveDescriptor(doc)?.clips||[]).map(async clip=>({...clip,tracks:await Promise.all(clip.tracks.map(async t=>({...t,times:await gltf.parser.getDependency('accessor',t.input),values:await gltf.parser.getDependency('accessor',t.output)})))})));
  const clips=curves.length?curves.map(c=>new T.AnimationClip(c.name,c.duration,[])):clipMetadata?.map(clip=>({...clip,load:async()=>{
   const loaded=await gltf.parser.getDependency('animation',clip.index);
@@ -40,15 +41,15 @@ export function curveSamples(track,component=0,budget=600){
 }
 export function createResourcePanel({document=globalThis.document,onChange=()=>{}}={}){
  const element=document.createElement('section');element.className='resource-panel';element.hidden=true;
- const note=document.createElement('p'),select=document.createElement('select'),component=document.createElement('select'),canvas=document.createElement('canvas');select.setAttribute('aria-label','曲线轨道');component.setAttribute('aria-label','曲线分量');canvas.setAttribute('aria-label','动画采样曲线');element.setAttribute('aria-label','资源检查');element.append(select,component,canvas,note);
+ const note=document.createElement('p'),select=document.createElement('select'),component=document.createElement('select'),canvas=document.createElement('canvas');select.setAttribute('aria-label',localizeText("曲线轨道"));component.setAttribute('aria-label',localizeText("曲线分量"));canvas.setAttribute('aria-label',localizeText("动画采样曲线"));element.setAttribute('aria-label',localizeText("资源检查"));element.append(select,component,canvas,note);
  let current=null,clip=null,track=null,lastClip=null,samples=[],range=[0,1],sharedRange=null,time=0;
  const option=(text,value)=>{const o=document.createElement('option');o.textContent=text;o.value=String(value);return o;};
- function choose(notify=true){track=clip?.tracks[Number(select.value)||0];component.replaceChildren();if(track){if(track.width<=4)component.append(option('全部分量',-1));for(let i=0;i<track.width;i++)component.append(option('分量 '+(i+1),i));}rebuild(notify);}
+ function choose(notify=true){track=clip?.tracks[Number(select.value)||0];component.replaceChildren();if(track){if(track.width<=4)component.append(option(localizeText("全部分量"),-1));for(let i=0;i<track.width;i++)component.append(option(localizeText("分量 ")+(i+1),i));}rebuild(notify);}
  function rebuild(notify=true){samples=[];if(track){const components=Number(component.value)<0?Array.from({length:track.width},(_,i)=>i):[Number(component.value)||0];samples=components.map(i=>({i,points:curveSamples(track,i)}));const values=samples.flatMap(s=>s.points.map(p=>p[1])),lo=Math.min(...values),hi=Math.max(...values),pad=Math.max((hi-lo)*.08,.01);range=[lo-pad,hi+pad];}if(notify)onChange();}
  select.onchange=()=>choose();component.onchange=()=>rebuild();
  function paint(ctx,width,height){
   const domain=sharedRange||range;
-  ctx.fillStyle='#161e2a';ctx.fillRect(0,0,width,height);ctx.font='12px sans-serif';ctx.fillStyle='#dce6f6';ctx.fillText((clip?.name||'资源信息')+' · '+time.toFixed(3)+' s',16,22);
+  ctx.fillStyle='#161e2a';ctx.fillRect(0,0,width,height);ctx.font='12px sans-serif';ctx.fillStyle='#dce6f6';ctx.fillText((clip?.name||localizeText("资源信息"))+' · '+time.toFixed(3)+' s',16,22);
   if(!track)return;ctx.fillStyle='#b7c7df';ctx.fillText(track.binding.slice(0,100)+' · '+track.kind,16,43);const x=54,y=54,w=Math.max(1,width-78),h=Math.max(1,height-96),duration=clip.duration||1;
   ctx.strokeStyle='#33445d';ctx.lineWidth=1;for(let i=0;i<=4;i++){const yy=y+h*i/4;ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x+w,yy);ctx.stroke();ctx.fillText((domain[1]-(domain[1]-domain[0])*i/4).toPrecision(3),4,yy+4);}ctx.fillText('0 s',x,y+h+20);ctx.fillText(duration.toFixed(3)+' s',Math.max(x,x+w-58),y+h+20);
   const colors=['#8fbafa','#f2c886','#a3d7b8','#d3adfa'];for(const [j,s]of samples.entries()){ctx.strokeStyle=colors[j%colors.length];ctx.beginPath();for(const [i,p]of s.points.entries()){const px=x+p[0]/duration*w,py=y+(domain[1]-p[1])/(domain[1]-domain[0])*h;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.stroke();}

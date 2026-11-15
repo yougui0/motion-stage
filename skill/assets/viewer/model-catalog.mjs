@@ -1,3 +1,4 @@
+import {t as localizeText} from './i18n.mjs';
 import {resourceLabel} from './resource-capabilities.mjs';
 import {element, createActionButton} from './ui.mjs';
 
@@ -98,24 +99,24 @@ export function createCatalogRequests({fetchPage, readCatalog = () => null, comm
 
 function scanDescription(scan) {
   switch (scan.state) {
-    case 'scanning': return '正在扫描 · 已检查 ' + scan.visitedFiles + ' 个文件';
-    case 'partial': return '扫描未完整完成，可缩小目录范围后刷新';
-    case 'failed': return '扫描失败：' + scan.error;
-    case 'interrupted': return '上次扫描被中断，请刷新目录';
+    case 'scanning': return localizeText("正在扫描 · 已检查 ") + scan.visitedFiles + localizeText(" 个文件");
+    case 'partial': return localizeText("扫描未完整完成，可缩小目录范围后刷新");
+    case 'failed': return localizeText("扫描失败：") + scan.error;
+    case 'interrupted': return localizeText("上次扫描被中断，请刷新目录");
     default: return '';
   }
 }
 
 function badge(row, selected) {
-  if (selected) return '当前模型';
-  if (row.origin === 'teaching') return '教学示例';
-  if (row.status === 'source-only') return '制作源';
-  if (row.status === 'missing') return '源文件缺失';
-  if (row.status === 'invalid') return '无法预览';
+  if (selected) return localizeText("当前模型");
+  if (row.origin === 'teaching') return localizeText("教学示例");
+  if (row.status === 'source-only') return localizeText("制作源");
+  if (row.status === 'missing') return localizeText("源文件缺失");
+  if (row.status === 'invalid') return localizeText("无法预览");
   if(row.metadata?.capabilities)return resourceLabel(row.metadata.capabilities);
-  if (row.metadata?.kind === 'skeleton') return '骨架资源';
-  if (row.character) return row.confirmed ? '项目已关联' : '待确认角色';
-  return row.format === 'fbx' && !row.opened ? '首次打开时转换' : '可预览';
+  if (row.metadata?.kind === 'skeleton') return localizeText("骨架资源");
+  if (row.character) return row.confirmed ? localizeText("项目已关联") : localizeText("待确认角色");
+  return row.format === 'fbx' && !row.opened ? localizeText("首次打开时转换") : localizeText("可预览");
 }
 
 // The catalog owns its data, search and DOM. The host supplies only its current
@@ -165,25 +166,25 @@ export function createModelCatalog({
     const actions = el('div', undefined, 'model-card-actions');
     copy.append(
       el('strong', row.name),
-      el('small', row.relativePath || (row.origin === 'teaching' ? '原创教学素材' : '手动导入的素材'))
+      el('small', row.relativePath || (row.origin === 'teaching' ? localizeText("原创教学素材") : localizeText("手动导入的素材")))
     );
     const clips = row.metadata?.clips;
     const info = [
       row.format.toUpperCase(),
       row.bytes !== undefined ? (row.bytes / 1048576).toFixed(1) + ' MB' : '',
-      clips ? (clips.length ? clips.length + ' 个动作' : resourceLabel(row.metadata?.capabilities)) : ''
+      clips ? (clips.length ? clips.length + localizeText(" 个动作") : resourceLabel(row.metadata?.capabilities)) : ''
     ];
     copy.append(el('small', info.filter(Boolean).join(' · ')));
     if (row.character) {
-      copy.append(el('small', '模型内 ' + row.embeddedCount + ' 个动作' +
-        (row.variants?.length ? ' · ' + row.variants.length + ' 个模型版本' : '')));
+      copy.append(el('small', localizeText("模型内 ") + row.embeddedCount + localizeText(" 个动作") +
+        (row.variants?.length ? ' · ' + row.variants.length + localizeText(" 个模型版本") : '')));
       if (row.motionSources?.length) {
         const details = el('details');
-        details.append(el('summary', '外部动作来源（' + row.motionSources.length + '）'));
-        const labels = {ready:'已载入', declared:'待校验', 'needs-retarget':'需要重定向',
-          'needs-confirmation':'需要确认', unsupported:'需要转换', missing:'缺失', unavailable:'不可用'};
+        details.append(el('summary', localizeText("外部动作来源（") + row.motionSources.length + '）'));
+        const labels = {ready:localizeText("已载入"), declared:localizeText("待校验"), 'needs-retarget':localizeText("需要重定向"),
+          'needs-confirmation':localizeText("需要确认"), unsupported:localizeText("需要转换"), missing:localizeText("缺失"), unavailable:localizeText("不可用")};
         for (const source of row.motionSources) details.append(el('small', source.file + ' · ' +
-          (labels[source.status] || source.status) + ' · ' + (source.clips?.length ?? source.count) + ' 个动作' +
+          (labels[source.status] || source.status) + ' · ' + (source.clips?.length ?? source.count) + localizeText(" 个动作") +
           (source.error ? ' · ' + source.error : ''), source.error ? 'catalog-error' : ''));
         copy.append(details);
       }
@@ -191,28 +192,28 @@ export function createModelCatalog({
     const jobs = (view.jobs||[]).filter(job => (job.assetId || 'legacy') === row.id);
     const pendingJobs = jobs.filter(job => ['queued', 'running', 'needs-input'].includes(job.state));
     const pendingCount=view.jobCounts?.[row.id]?.active??pendingJobs.length;
-    if (pendingCount) copy.append(el('small', pendingCount + ' 条任务处理中'));
-    else if (row.hasCandidate) copy.append(el('small', '已有独立候选，可继续查看'));
+    if (pendingCount) copy.append(el('small', pendingCount + localizeText(" 条任务处理中")));
+    else if (row.hasCandidate) copy.append(el('small', localizeText("已有独立候选，可继续查看")));
     if (row.error) copy.append(el('small', row.error, 'catalog-error'));
     actions.append(el('span', badge(row, selected), 'catalog-badge'));
 
     const previewable = ['glb', 'gltf', 'fbx', 'json'].includes(row.format);
     const openOptions = row.character ? {character: true} : undefined;
     if (row.opened || previewable && row.status === 'available') {
-      const open = button(selected ? '继续查看' : row.opened ? '打开' : '预览',
+      const open = button(selected ? localizeText("继续查看") : row.opened ? localizeText("打开") : localizeText("预览"),
         () => openOptions ? onOpen(row.id, openOptions) : onOpen(row.id), 'secondary-button');
       open.disabled = view.switching;
       actions.append(open);
     }
     if ((row.sourceChanged || row.opened && row.origin === 'project' && row.format === 'fbx') && row.status === 'available') {
-      const update = button(row.sourceChanged ? '载入源文件新版本' : '重新转换 FBX',
+      const update = button(row.sourceChanged ? localizeText("载入源文件新版本") : localizeText("重新转换 FBX"),
         () => onOpen(row.id, {...openOptions, refreshSource: true}), 'text-button');
       update.disabled = view.switching;
       actions.append(update);
     }
     if (!row.character && row.origin === 'project' && ['glb', 'gltf'].includes(row.format) && row.status === 'available' &&
       view.activeAssetId?.startsWith('character-')) {
-      const associate = button('关联到当前角色', async () => {
+      const associate = button(localizeText("关联到当前角色"), async () => {
         const ticket = requests.capture();
         const result = await api('/api/characters/' + encodeURIComponent(view.activeAssetId) + '/associate', 'POST', {assetId:row.id});
         if (!requests.isCurrent(ticket) || getView().activeAssetId !== view.activeAssetId) return;
@@ -231,28 +232,28 @@ export function createModelCatalog({
     const host = $('modelList');
     const view = getView();
     host.replaceChildren();
-    $('modelCount').textContent = (data.sourceTotal??data.total)+' 文件';
-    if ($('sidebarModelCount')) $('sidebarModelCount').textContent = (data.sourceTotal??data.total)+' 文件';
+    $('modelCount').textContent = (data.sourceTotal??data.total)+localizeText(" 文件");
+    if ($('sidebarModelCount')) $('sidebarModelCount').textContent = (data.sourceTotal??data.total)+localizeText(" 文件");
     const scan = data.scan || {};
     const scanning = scan.state === 'scanning';
     $('refreshCatalog').disabled = scanning;
     const scanLabel = scanDescription(scan);
     const roles = data.kind === 'characters';
     $('catalogCharacters')?.setAttribute('aria-pressed',String(roles));$('catalogFiles')?.setAttribute('aria-pressed',String(!roles));
-    const title = data.linked ? roles ? '已关联 ' + data.confirmedTotal + ' 个角色 · ' +
-      (data.total - data.confirmedTotal) + ' 个待确认候选 · ' + data.sourceTotal + ' 个项目资源文件' :
-      '项目文件共 ' + data.total + ' 项，包含模型、动作、制作源及构建副本；这不是角色数量' : '关联项目文件夹后，自动发现其中的模型';
+    const title = data.linked ? roles ? localizeText("已关联 ") + data.confirmedTotal + localizeText(" 个角色 · ") +
+      (data.total - data.confirmedTotal) + localizeText(" 个待确认候选 · ") + data.sourceTotal + localizeText(" 个项目资源文件") :
+      localizeText("项目文件共 ") + data.total + localizeText(" 项，包含模型、动作、制作源及构建副本；这不是角色数量") : localizeText("关联项目文件夹后，自动发现其中的模型");
     message(title + (scanLabel ? ' · ' + scanLabel : '') +
       (scan.warnings?.length ? ' · ' + scan.warnings.join('；') : ''),
       ['failed', 'partial', 'interrupted'].includes(scan.state));
     for (const row of data.entries) host.append(rowCard(row, view));
     if (!data.entries.length) {
-      const text = query ? '没有匹配的模型。' : scanning ? '正在发现模型，请稍候…' :
-        '此目录暂未发现资源。支持 GLB、glTF、采样动作 JSON 和按需转换的 FBX。';
+      const text = query ? localizeText("没有匹配的模型。") : scanning ? localizeText("正在发现模型，请稍候…") :
+        localizeText("此目录暂未发现资源。支持 GLB、glTF、采样动作 JSON 和按需转换的 FBX。");
       host.append(el('p', text, 'clip-empty'));
     }
     $('catalogMore').hidden = !data.hasMore;
-    $('catalogMore').textContent = '加载更多（已显示 ' + data.entries.length + ' / ' + data.matched + '）';
+    $('catalogMore').textContent = localizeText("加载更多（已显示 ") + data.entries.length + ' / ' + data.matched + '）';
   }
 
   async function refresh({more = false} = {}) {

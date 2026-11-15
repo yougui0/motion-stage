@@ -1,3 +1,4 @@
+import {t as localizeText} from './i18n.mjs';
 // Left/right consistency between a change request and the picked body part.
 // Shared by the viewer (live hint before submitting) and the server (recorded
 // on the task so the agent sees the same conflict). Side is always the
@@ -64,6 +65,6 @@ export function sideConflict(request, bone) {
   if (requested === picked) return null;
   return {
     requested, picked, bone: String(bone),
-    message: `要求写的是${SIDE_NAMES[requested]}侧，选中的却是角色${SIDE_NAMES[picked]}侧的部位。左右按角色自己算：角色面向镜头时，它的右手在画面左边。`
+    message: localizeText("要求写的是{0}侧，选中的却是角色{1}侧的部位。左右按角色自己算：角色面向镜头时，它的右手在画面左边。",(SIDE_NAMES[requested]),(SIDE_NAMES[picked]))
   };
 }

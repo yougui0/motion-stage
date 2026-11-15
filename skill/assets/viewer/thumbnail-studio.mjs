@@ -1,3 +1,4 @@
+import {t as localizeText} from './i18n.mjs';
 // Thumbnail studio — renders character portraits and action key-pose cards in
 // the browser (the Node server has no GPU), uploads them to the workspace
 // cache and serves later sessions straight from disk.
@@ -131,7 +132,7 @@ export function createThumbnailStudio({api, loader, loadAsset, foreground = () =
       nodeFor: async index => {
         const node = await parser.getDependency('node', index);
         const twin = map.get(node);
-        if (!twin) throw Error('动作目标不在角色中');
+        if (!twin) throw Error(localizeText("动作目标不在角色中"));
         return twin;
       },
       dispose() { mixer.stopAllAction(); mixer.uncacheRoot(root); }
@@ -269,7 +270,7 @@ export function createThumbnailStudio({api, loader, loadAsset, foreground = () =
 
   async function encode(canvas) {
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.86));
-    if (!blob) throw Error('浏览器无法编码缩略图');
+    if (!blob) throw Error(localizeText("浏览器无法编码缩略图"));
     return blob;
   }
 
@@ -366,7 +367,7 @@ export function createThumbnailStudio({api, loader, loadAsset, foreground = () =
   async function sharedClip(subject, target, actionId, samples) {
     const result = await api('/api/actions/curves', 'POST', {...target, actionIds: [actionId], ...(samples ? {samples} : {})});
     const data = result.clips?.[actionId];
-    if (!data || data.error) throw Error(data?.error || '动作曲线不可用');
+    if (!data || data.error) throw Error(data?.error || localizeText("动作曲线不可用"));
     const [clip] = await runtimeMotionClips(T, [{name: data.name, tracks: data.tracks}], subject.nodeFor);
     return clip;
   }
@@ -376,7 +377,7 @@ export function createThumbnailStudio({api, loader, loadAsset, foreground = () =
     const portrait = entry.portrait;
     if (portrait.source === 'workspace') return loadAsset(portrait.asset, loader);
     const response = await fetch(portrait.url);
-    if (!response.ok) throw Error('模型读取失败（HTTP ' + response.status + '）');
+    if (!response.ok) throw Error(localizeText("模型读取失败（HTTP ") + response.status + '）');
     return loader.parseAsync(await response.arrayBuffer(), '');
   }
 
@@ -547,7 +548,7 @@ export function createThumbnailStudio({api, loader, loadAsset, foreground = () =
       return cached(key, async () => {
         const result = await api('/api/motions/preview', 'POST', request);
         const data = result.clips?.find(c => c.name === request.clip) || result.clips?.[0];
-        if (!data?.tracks?.length) throw Error('动作曲线不可用');
+        if (!data?.tracks?.length) throw Error(localizeText("动作曲线不可用"));
         const [clip] = await runtimeMotionClips(T, [{name: data.name, tracks: data.tracks}], subject.nodeFor);
         return drawAction(subject, clip, category);
       }, {priority, wanted});

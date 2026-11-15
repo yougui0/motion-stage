@@ -33,16 +33,45 @@ export function modelSlots(cfg,id=cfg.activeAssetId){
  if(!Object.hasOwn(cfg.models||{},id))return {};
  return cfg.models[id].slots||{};
 }
-export function projectView(cfg,id=cfg.activeAssetId){if(id&&!Object.hasOwn(cfg.models,id))throw Error('模型不存在');return {version:3,title:cfg.models[id]?.name||cfg.title,fps:cfg.fps,revision:cfg.revision||0,activeAssetId:id||null,legacyAssetId:cfg.legacyAssetId||null,slots:modelSlots(cfg,id)};}
+function removedModelError(){return Object.assign(Error('此素材已从工作区删除。'),{code:'MODEL_REMOVED'});}
+export function projectView(cfg,id=cfg.activeAssetId){
+ if(id&&!Object.hasOwn(cfg.models,id)){if(Object.hasOwn(cfg.removedModels||{},id))throw removedModelError();throw Error('模型不存在');}
+ const model=cfg.models[id];
+ return {version:3,title:model?.name||cfg.title,fps:cfg.fps,revision:cfg.revision||0,activeAssetId:id||null,legacyAssetId:cfg.legacyAssetId||null,headRevision:model?.headRevision||0,slots:modelSlots(cfg,id)};
+}
 export function setModelSlots(cfg,id,slots,{activate=false}={}){
  if(!Object.hasOwn(cfg.models,id))throw Error('模型不存在');
  cfg.models[id].slots=structuredClone(slots);cfg.models[id].updatedAt=new Date().toISOString();
  if(activate||cfg.activeAssetId===id)cfg.activeAssetId=id;
  cfg.revision=(cfg.revision||0)+1;
 }
-export async function activateModel(work,id){return withWorkspaceLock(work,async()=>{
- const cfg=await readProject(work);if(!Object.hasOwn(cfg.models,id)||!modelSlots(cfg,id).baseline)throw Error('模型尚未准备好');
+export async function activateModel(work,id,{restoreRemoved=false}={}){return withWorkspaceLock(work,async()=>{
+ const cfg=await readProject(work);
+ if(Object.hasOwn(cfg.removedModels||{},id)){
+  if(!restoreRemoved)throw removedModelError();
+  const model=cfg.removedModels[id];
+  cfg.models[id]={...model,headRevision:(model.headRevision||0)+1};
+  delete cfg.removedModels[id];
+ }
+ if(!Object.hasOwn(cfg.models,id)||!modelSlots(cfg,id).baseline)throw Error('模型尚未准备好');
  setModelSlots(cfg,id,modelSlots(cfg,id),{activate:true});await atomic(await inside(work,'project.json'),cfg);return projectView(cfg);
+});}
+export async function removeModel(work,id,{expectedHeadRevision,expectedName}={}){return withWorkspaceLock(work,async()=>{
+ const cfg=await readProject(work);
+ if(Object.hasOwn(cfg.removedModels||{},id))return {project:projectView(cfg)};
+ if(!Object.hasOwn(cfg.models,id)||!modelSlots(cfg,id).baseline)throw Error('模型尚未准备好');
+ const model=cfg.models[id];
+ if((model.headRevision||0)!==expectedHeadRevision||model.name!==expectedName)throw Object.assign(Error('素材名称或版本已变化，请刷新后再删除。'),{code:'MODEL_CHANGED'});
+ const {assertModelAvailable}=await import('./jobs.mjs');
+ try{await assertModelAvailable(work,id);}
+ catch(error){if(error.code==='MODEL_JOB_ACTIVE')error.message='此素材还有未结束的修改任务。请先完成或取消任务，再删除素材。';throw error;}
+ // Blobs are content-addressed and also used by frozen tasks and other models.
+ (cfg.removedModels??={})[id]=model;
+ delete cfg.models[id];
+ if(cfg.activeAssetId===id)cfg.activeAssetId=Object.keys(cfg.models).find(key=>modelSlots(cfg,key).baseline)||null;
+ cfg.revision=(cfg.revision||0)+1;
+ await atomic(await inside(work,'project.json'),cfg);
+ return {project:projectView(cfg)};
 });}
 export const hasClip=(asset,name,time=0)=>asset?.clips?.length?asset.clips.some(c=>c.name===name&&Number.isFinite(time)&&time>=0&&time<=c.duration+.001):(name===null||name===''||name==='静态姿态')&&Number.isFinite(time)&&time>=0&&time<=.001;
 export async function inside(root,name){
@@ -95,10 +124,14 @@ export async function importAsset(work,slot,bytes,label,options={}){
  const prepared=await stageAsset(work,slot,bytes,label,options);await atomic(await inside(work,'project.json'),prepared.project);return prepared.asset;
 }
 export async function stageAsset(work,slot,bytes,label,options={}){
+ const cfg=options.project?normalizeProject(structuredClone(options.project)):await readProject(work);
+ const targetId=options.assetId||cfg.activeAssetId;
+ const newIdentity=options.newModel||(!targetId&&Object.hasOwn(cfg.removedModels||{},'legacy'));
+ const id=newIdentity?randomUUID():targetId||'legacy';
+ if(!/^[a-zA-Z0-9_-]{1,80}$/.test(id)||['__proto__','prototype','constructor'].includes(id))throw Error('无效模型 ID');
+ if(Object.hasOwn(cfg.removedModels||{},id))throw removedModelError();
  const {validateCandidate}=await import('./candidate-validation.mjs');validateCandidate(bytes);
  const info=glbInfo(bytes),file='assets/'+info.sha256+'.glb';await atomic(await inside(work,file),bytes);
- const cfg=options.project?normalizeProject(structuredClone(options.project)):await readProject(work),id=options.newModel?randomUUID():options.assetId||cfg.activeAssetId||'legacy';
- if(!/^[a-zA-Z0-9_-]{1,80}$/.test(id)||['__proto__','prototype','constructor'].includes(id))throw Error('无效模型 ID');
  if(!Object.hasOwn(cfg.models,id))cfg.models[id]={id,name:String(label||'角色').slice(0,160),origin:'import',slots:{},createdAt:new Date().toISOString()};
  const model=cfg.models[id],heads=structuredClone(modelSlots(cfg,id));
  if(options.reset&&heads.baseline)(model.revisions??=[]).push({slots:structuredClone(heads),at:new Date().toISOString()});

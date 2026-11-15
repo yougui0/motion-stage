@@ -1,3 +1,4 @@
+import {t as localizeText} from './i18n.mjs';
 import {callerLabel} from './caller.mjs';
 import {element as el,createActionButton} from './ui.mjs';
 
@@ -14,20 +15,20 @@ export function createRuntimeHandoff({dialog, body, request, copy}) {
   if (dialog.open) return;
   const ticket = ++generation;
   dialog.showModal();
-  body.replaceChildren(el('p', '正在准备接入任务…'));
+  body.replaceChildren(el('p', localizeText("正在准备接入任务…")));
   try {
    const {task, prompt, delivery} = await request({assetId, clip:selectedClip ?? null});
    if (ticket !== generation || !dialog.open) return;
    const title = [task.project.name, task.character.name, task.action?.name].filter(Boolean).join(' · ');
-   const destination = task.caller ? '打开动作台的 '+callerLabel(task.caller)+' 对话' : '当前对话';
-   const status = el('p', delivery === 'sent' ? '已发送到'+destination+'。' : '复制接入任务，粘贴到'+destination+'。');
+   const destination = task.caller ? localizeText("打开动作台的 ")+callerLabel(task.caller)+localizeText(" 对话") : localizeText("当前对话");
+   const status = el('p', delivery === 'sent' ? localizeText("已发送到")+destination+'。' : localizeText("复制接入任务，粘贴到")+destination+'。');
    const text = el('textarea', undefined, 'runtime-handoff-text');
    text.readOnly = true;
    text.value = prompt;
-   text.setAttribute('aria-label', '接入任务内容');
-   const copyButton = createActionButton('复制接入任务', async () => {
+   text.setAttribute('aria-label', localizeText("接入任务内容"));
+   const copyButton = createActionButton(localizeText("复制接入任务"), async () => {
     await copy(prompt);
-    status.textContent = delivery === 'sent' ? '已发送到'+destination+'，接入任务也已复制。' : '已复制，粘贴到'+destination+'。';
+    status.textContent = delivery === 'sent' ? localizeText("已发送到")+destination+localizeText("，接入任务也已复制。") : localizeText("已复制，粘贴到")+destination+'。';
    }, {
     className: 'primary-button',
     onError(error) { status.textContent = error.message; text.focus(); text.select(); },
@@ -43,19 +44,19 @@ export function createIntegrationPanel({api,getPaths,copy,onError}){
  const dialog=document.getElementById('integrationDialog'),body=document.getElementById('integrationBody');let generation=0;
  const button=(label,fn)=>createActionButton(label,fn,{onError});
  return {async open({jobId,actionId}={}){
-  const ticket=++generation;dialog.showModal();body.replaceChildren(el('p','正在核对版本与游戏文件…'));
+  const ticket=++generation;dialog.showModal();body.replaceChildren(el('p',localizeText("正在核对版本与游戏文件…")));
   try{
    const data=await api('/api/integrations');if(ticket!==generation||!dialog.open)return;
-   body.replaceChildren(el('p',data.project?.name?'关联项目：'+data.project.name:'尚未关联游戏项目。先在左上角“关联项目”选择工程，再由当前对话处理接入。','integration-project'));
+   body.replaceChildren(el('p',data.project?.name?localizeText("关联项目：")+data.project.name:localizeText("尚未关联游戏项目。先在左上角“关联项目”选择工程，再由当前对话处理接入。"),'integration-project'));
    const all=[...data.candidates,...data.actions],rows=all.filter(r=>jobId?r.jobId===jobId:actionId?r.actionId===actionId:r.status==='pending');
-   if(!rows.length)body.append(el('p','目前没有等待接入的认可候选或收录动作。先比较并保留一版，或在动作库收录动作。'));
+   if(!rows.length)body.append(el('p',localizeText("目前没有等待接入的认可候选或收录动作。先比较并保留一版，或在动作库收录动作。")));
    for(const row of rows){
-    const card=el('section',undefined,'integration-card');card.append(el('h3',(row.model||'角色')+' · '+row.clip),el('span',({pending:'待接入',integrated:'已接入',superseded:'已有后续版本',withdrawn:'认可已撤回'})[row.status],'check-badge'),el('p',row.hint));
-    if(row.game.modelFile)card.append(el('p','游戏文件：'+row.game.modelFile));
-    if(row.references?.some(r=>r.kind==='source'))card.append(el('p','制作源：'+row.references.filter(r=>r.kind==='source').map(r=>r.path).join('、')));
-    if(row.status==='pending'){const text=integrationHandoff(row,getPaths());card.append(button('复制接入请求',()=>copy(text)));const details=el('details');details.append(el('summary','查看完整交接内容'),el('pre',text));card.append(details);}
+    const card=el('section',undefined,'integration-card');card.append(el('h3',(row.model||localizeText("角色"))+' · '+row.clip),el('span',({pending:localizeText("待接入"),integrated:localizeText("已接入"),superseded:localizeText("已有后续版本"),withdrawn:localizeText("认可已撤回")})[row.status],'check-badge'),el('p',row.hint));
+    if(row.game.modelFile)card.append(el('p',localizeText("游戏文件：")+row.game.modelFile));
+    if(row.references?.some(r=>r.kind==='source'))card.append(el('p',localizeText("制作源：")+row.references.filter(r=>r.kind==='source').map(r=>r.path).join('、')));
+    if(row.status==='pending'){const text=integrationHandoff(row,getPaths());card.append(button(localizeText("复制接入请求"),()=>copy(text)));const details=el('details');details.append(el('summary',localizeText("查看完整交接内容")),el('pre',text));card.append(details);}
     body.append(card);
    }
-  }catch(error){if(ticket===generation)body.replaceChildren(el('p',error.message,'error-copy'),button('重新读取',()=>this.open({jobId,actionId})));}
+  }catch(error){if(ticket===generation)body.replaceChildren(el('p',error.message,'error-copy'),button(localizeText("重新读取"),()=>this.open({jobId,actionId})));}
  }};
 }

@@ -1,3 +1,4 @@
+import {t as localizeText} from './i18n.mjs';
 import { createPreviewFrame, createPreviewLease } from './runtime-preview.mjs';
 
 // Match the actual source of the current clip, including composite character banks.
@@ -13,7 +14,7 @@ export function runtimeStageSource(source, clip) {
 
 export function createRuntimeStage({stage, host, button, assetButton, status, transport, timeline, play, clock, setup, retry, handoff, load, renew, release, current, onMode, onReturn}) {
  let active = false, asset, session, source, frame, origin, selection, pending, timer, observed, framePath, frameAsset;
- const lease = createPreviewLease({renew, release, onExpired: () => { session = null; fail('预览服务已停止，重新切换可连接。'); }});
+ const lease = createPreviewLease({renew, release, onExpired: () => { session = null; fail(localizeText("预览服务已停止，重新切换可连接。")); }});
 
  function send(message) {
   frame?.contentWindow?.postMessage({channel:'motion-stage', ...message}, origin);
@@ -49,12 +50,12 @@ export function createRuntimeStage({stage, host, button, assetButton, status, tr
   if (!session?.states) return;
   const match = findStageState(session.states, input);
   if (!match) {
-   fail(session.message || '当前动作没有对应的游戏效果预览。', Boolean(session.states.length) ||
+   fail(session.message || localizeText("当前动作没有对应的游戏效果预览。"), Boolean(session.states.length) ||
     ['PREVIEW_SETUP_REQUIRED','PREVIEW_CHARACTER_UNMAPPED'].includes(session.code));
    return;
   }
   observed = null;
-  status.textContent = '正在载入游戏效果…';
+  status.textContent = localizeText("正在载入游戏效果…");
   transport.hidden = true;
   const url = new URL(match.url);
   const command = {type:'select', key:match.stage.key, character:match.stage.character, time:input.time, playing:input.playing,
@@ -66,20 +67,20 @@ export function createRuntimeStage({stage, host, button, assetButton, status, tr
    framePath=url.pathname;
    url.searchParams.set('motionStage', '1');
    url.searchParams.set('parentOrigin', window.location.origin);
-   frame = createPreviewFrame({label:'游戏效果 · '+match.label, url:url.href});
+   frame = createPreviewFrame({label:localizeText("游戏效果 · ")+match.label, url:url.href});
    host.append(frame);
   }
   frameAsset=input.assetId;
   pending = {...command, request:crypto.randomUUID()};
   if (selection) send(pending);
   clearTimeout(timer);
-  timer = setTimeout(() => fail('游戏效果预览未响应。可切回素材预览后重试。'), 20000);
+  timer = setTimeout(() => fail(localizeText("游戏效果预览未响应。可切回素材预览后重试。")), 20000);
  }
 
  async function open(input) {
   const ticket = {id:crypto.randomUUID()};
   session = ticket;
-  status.textContent = '正在连接游戏效果预览…';
+  status.textContent = localizeText("正在连接游戏效果预览…");
   try {
    const result = await load(input.assetId, false, undefined, ticket.id);
    if (!active || session !== ticket) {
@@ -93,7 +94,7 @@ export function createRuntimeStage({stage, host, button, assetButton, status, tr
   } catch (error) {
    if (active && session === ticket) {
     lease.end();
-    fail(error.message || '无法连接游戏预览。', error.code === 'PREVIEW_TRUST_REQUIRED');
+    fail(error.message || localizeText("无法连接游戏预览。"), error.code === 'PREVIEW_TRUST_REQUIRED');
    }
   }
  }
@@ -119,7 +120,7 @@ export function createRuntimeStage({stage, host, button, assetButton, status, tr
   timeline.max = String(data.duration);
   timeline.value = String(data.time);
   clock.textContent = data.time.toFixed(3)+' / '+data.duration.toFixed(3)+' s';
-  play.textContent = data.playing ? '暂停' : '播放';
+  play.textContent = data.playing ? localizeText("暂停") : localizeText("播放");
  }
 
  window.addEventListener('message', event => {
@@ -128,10 +129,10 @@ export function createRuntimeStage({stage, host, button, assetButton, status, tr
   if (data?.channel !== 'motion-stage') return;
   if (data.type === 'ready') { selection = {switchCharacter:data.switchCharacter===true}; if (pending) send(pending); }
   if (!pending||data.request !== pending.request) return;
-  if (data.type === 'error') { fail('游戏无法播放当前动作。'); return; }
+  if (data.type === 'error') { fail(localizeText("游戏无法播放当前动作。")); return; }
   if (data.type === 'state') {
    clearTimeout(timer);
-   status.textContent = '游戏效果 · 切回素材预览可标记';
+   status.textContent = localizeText("游戏效果 · 切回素材预览可标记");
    transport.hidden = false;
    observe(data);
   }

@@ -1,3 +1,4 @@
+import {t as localizeText,language as interfaceLanguage} from './i18n.mjs';
 // 动作库 — the character rail, the cast gallery and the per-character action
 // grid. Pure presentation + request fencing; the stage, clip bindings and
 // model heads stay owned by app.js and are reached only through callbacks.
@@ -12,9 +13,9 @@ const CATEGORY_ICON = {
   all: 'grid', idle: 'cat-idle', move: 'cat-move', attack: 'cat-attack', skill: 'cat-skill', defense: 'cat-defense',
   hit: 'cat-hit', air: 'cat-air', down: 'cat-down', emote: 'cat-emote', other: 'cat-other'
 };
-const SHORT_LABEL = {defense: '防御'};
+const SHORT_LABEL = {defense: localizeText("防御")};
 
-export const categoryLabel = id => SHORT_LABEL[id] || ACTION_CATEGORIES.find(c => c.id === id)?.label || '全部';
+export const categoryLabel = id => SHORT_LABEL[id] || ACTION_CATEGORIES.find(c => c.id === id)?.[interfaceLanguage==='en'?'en':'label'] || localizeText("全部");
 export function formatSeconds(value) {
   const seconds = Number(value) || 0;
   return seconds >= 10 ? Math.round(seconds) + 's' : seconds.toFixed(seconds < 1 ? 2 : 1) + 's';
@@ -29,9 +30,9 @@ export function buildSections({own = [], matched = [], saved = [], category = 'a
   const counts = {all: pool.length};
   for (const row of pool) counts[row.info.category] = (counts[row.info.category] || 0) + 1;
   const sections = [
-    {id: 'saved', title: '常用', rows: saved.filter(pass)},
-    {id: 'own', title: '角色自带', rows: own.filter(pass)},
-    {id: 'matched', title: '匹配动作', rows: matched.filter(pass)}
+    {id: 'saved', title: localizeText("常用"), rows: saved.filter(pass)},
+    {id: 'own', title: localizeText("角色自带"), rows: own.filter(pass)},
+    {id: 'matched', title: localizeText("匹配动作"), rows: matched.filter(pass)}
   ].filter(section => section.rows.length);
   return {sections, counts};
 }
@@ -43,7 +44,7 @@ export function describeRow(kind, source) {
   const id = kind === 'own' ? 'own:' + name : kind === 'saved' ? 'saved:' + source.id : source.id;
   return {
     kind, id, name, duration, info, source,
-    label: kind === 'saved' ? source.name : info.label,
+    label: kind === 'saved' ? source.name : interfaceLanguage==='en' ? info.title || name : info.label,
     search: actionSearchText(name, info) + ' ' + String(source.sourceName || '').toLowerCase() + (kind === 'saved' ? ' ' + String(source.name).toLowerCase() : '')
   };
 }
@@ -105,7 +106,7 @@ export function createCastBrowser({
       drawRail();
       if ($('castGallery')?.open) drawGallery();
     } catch (error) {
-      if (ticket === castTicket) setRailMessage('角色列表暂不可用：' + error.message);
+      if (ticket === castTicket) setRailMessage(localizeText("角色列表暂不可用：") + error.message);
     }
   }
 
@@ -127,6 +128,10 @@ export function createCastBrowser({
     host.replaceChildren(el('p', text, 'rail-message'));
   }
 
+  function characterLabel(entry) {
+    return entry.id === 'legacy' && entry.name === '原创示例 · 修改前' ? localizeText("原创示例 · 修改前") : entry.name;
+  }
+
   function initials(name) {
     const text = String(name || '?').trim();
     return /^[一-鿿]/.test(text) ? text.slice(0, 1) : text.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || '?';
@@ -134,7 +139,7 @@ export function createCastBrowser({
 
   function portraitNode(entry, className) {
     const holder = el('span', undefined, className);
-    holder.append(el('span', initials(entry.name), 'portrait-initial'));
+    holder.append(el('span', initials(characterLabel(entry)), 'portrait-initial'));
     const image = documentRef.createElement('img');
     image.alt = '';
     image.decoding = 'async';
@@ -196,7 +201,7 @@ export function createCastBrowser({
       }
     } catch (error) {
       holder.classList.add('failed');
-      holder.title = '预览图暂不可用：' + error.message;
+      holder.title = localizeText("预览图暂不可用：") + error.message;
     }
   }
 
@@ -208,7 +213,7 @@ export function createCastBrowser({
     if (!castLoaded) return;
     const stage = getStage();
     const list = railEntries();
-    if (!list.length) { setRailMessage('还没有角色。导入 GLB，或关联游戏项目。'); return; }
+    if (!list.length) { setRailMessage(localizeText("还没有角色。导入 GLB，或关联游戏项目。")); return; }
     host.replaceChildren(...list.map(entry => {
       const tile = el('button', undefined, 'cast-tile');
       tile.type = 'button';
@@ -217,8 +222,8 @@ export function createCastBrowser({
       tile.setAttribute('aria-selected', String(selected));
       tile.classList.toggle('active', selected);
       tile.classList.toggle('opening', entry.id === openingId);
-      tile.title = entry.name + (entry.relativePath ? '\n' + entry.relativePath : '');
-      tile.append(portraitNode(entry, 'cast-portrait'), el('span', entry.name, 'cast-name'));
+      tile.title = characterLabel(entry) + (entry.relativePath ? '\n' + entry.relativePath : '');
+      tile.append(portraitNode(entry, 'cast-portrait'), el('span', characterLabel(entry), 'cast-name'));
       const count = actionCountOf(entry);
       if (count) tile.append(el('span', String(count), 'cast-count'));
       tile.onclick = () => chooseCharacter(entry);
@@ -250,11 +255,11 @@ export function createCastBrowser({
     const q = ($('castGallerySearch')?.value || '').trim().toLowerCase();
     const match = entry => !q || (entry.name + ' ' + (entry.relativePath || '')).toLowerCase().includes(q);
     const groups = [
-      ['项目角色', '在角色声明中确认的角色', cast.filter(e => e.confirmed && match(e))],
-      ['其他角色模型', '项目里带骨骼或动作的 GLB，可直接打开预览', cast.filter(e => !e.confirmed && e.kind === 'character' && match(e))],
-      ['工作区模型', '导入或示例素材', cast.filter(e => e.kind === 'model' && match(e))]
+      [localizeText("项目角色"), localizeText("在角色声明中确认的角色"), cast.filter(e => e.confirmed && match(e))],
+      [localizeText("其他角色模型"), localizeText("项目里带骨骼或动作的 GLB，可直接打开预览"), cast.filter(e => !e.confirmed && e.kind === 'character' && match(e))],
+      [localizeText("工作区模型"), localizeText("导入或示例素材"), cast.filter(e => e.kind === 'model' && match(e))]
     ].filter(([, , rows]) => rows.length);
-    if (!groups.length) { host.replaceChildren(el('p', castLoaded ? '没有符合的角色。' : '正在读取角色…', 'gallery-empty')); return; }
+    if (!groups.length) { host.replaceChildren(el('p', castLoaded ? localizeText("没有符合的角色。") : localizeText("正在读取角色…"), 'gallery-empty')); return; }
     const stage = getStage();
     host.replaceChildren(...groups.map(([title, hint, rows]) => {
       const section = el('section', undefined, 'gallery-section');
@@ -267,13 +272,13 @@ export function createCastBrowser({
         card.classList.toggle('active', entry.id === stage?.assetId);
         const count = actionCountOf(entry);
         const text = el('span', undefined, 'gallery-text');
-        text.append(el('b', entry.name), el('small', count ? count + ' 个动作' : entry.format?.toUpperCase() || '模型'));
+        text.append(el('b', entry.name), el('small', count ? count + localizeText(" 个动作") : entry.format?.toUpperCase() || localizeText("模型")));
         card.append(portraitNode(entry, 'gallery-portrait'), text);
         card.title = entry.relativePath || entry.name;
         card.onclick = () => chooseCharacter(entry, {fromGallery: true});
         return card;
       }));
-      if (rows.length > 120) grid.append(el('p', '还有 ' + (rows.length - 120) + ' 个，搜索名称即可找到。', 'gallery-more'));
+      if (rows.length > 120) grid.append(el('p', localizeText("还有 ") + (rows.length - 120) + localizeText(" 个，搜索名称即可找到。"), 'gallery-more'));
       section.append(head, grid);
       return section;
     }));
@@ -387,23 +392,23 @@ export function createCastBrowser({
     const stage = getStage();
     status.replaceChildren();
     status.dataset.state = scan?.state || (target() ? 'loading' : 'idle');
-    if (!target()) { status.textContent = stage?.loading ? '正在打开角色…' : '选择一个角色查看动作'; return; }
-    if (!scan) { status.textContent = '正在为角色匹配动作…'; return; }
+    if (!target()) { status.textContent = stage?.loading ? localizeText("正在打开角色…") : localizeText("选择一个角色查看动作"); return; }
+    if (!scan) { status.textContent = localizeText("正在为角色匹配动作…"); return; }
     if (scan.state === 'scanning') {
       const progress = el('span', undefined, 'ab-progress');
       const fill = el('i');
       fill.style.width = Math.round(100 * (scan.checked || 0) / Math.max(1, scan.total || 1)) + '%';
       progress.append(fill);
-      status.append(el('span', '正在从项目中匹配动作 · ' + (scan.checked || 0) + ' / ' + (scan.total || 0)), progress);
+      status.append(el('span', localizeText("正在从项目中匹配动作 · ") + (scan.checked || 0) + ' / ' + (scan.total || 0)), progress);
       return;
     }
-    if (scan.state === 'failed') { status.textContent = '匹配未完成：' + (scan.error || '未知原因'); return; }
-    const name = stage?.name || '角色';
+    if (scan.state === 'failed') { status.textContent = localizeText("匹配未完成：") + (scan.error || localizeText("未知原因")); return; }
+    const name = stage?.name || localizeText("角色");
     const text = matched.length
-      ? '已为' + name + '匹配 ' + matched.length + ' 个骨架一致的动作' + (scan.state === 'partial' ? '（部分结果）' : '')
-      : '项目中暂未找到与' + name + '骨架一致的其他动作';
+      ? localizeText("已为") + name + localizeText("匹配 ") + matched.length + localizeText(" 个骨架一致的动作") + (scan.state === 'partial' ? localizeText("（部分结果）") : '')
+      : localizeText("项目中暂未找到与") + name + localizeText("骨架一致的其他动作");
     status.append(el('span', text));
-    const refresh = el('button', '重新匹配', 'ab-refresh');
+    const refresh = el('button', localizeText("重新匹配"), 'ab-refresh');
     refresh.type = 'button';
     refresh.onclick = () => { clearTimeout(pollTimer); void loadActions(true); };
     status.append(refresh);
@@ -440,7 +445,7 @@ export function createCastBrowser({
     const stage = getStage();
     drawReplacementSelection(stage);
     drawnSignature = [identity, own.length, matched.length, saved.length, scan?.state, stage?.name].join('|');
-    if ($('abTitle')) $('abTitle').textContent = stage?.name ? stage.name + '的动作' : '动作库';
+    if ($('abTitle')) $('abTitle').textContent = stage?.name ? stage.name + localizeText("的动作") : localizeText("动作库");
     const {sections, counts} = buildSections({own, matched, saved, category, query});
     if ($('abCount')) $('abCount').textContent = target() ? String(own.length + matched.length + saved.length) : '';
     drawChips(counts);
@@ -448,7 +453,7 @@ export function createCastBrowser({
     cardObserver?.disconnect();
     pageObserver?.disconnect();
     if (!target()) {
-      host.replaceChildren(emptyState(stage?.loading ? '正在打开角色' : '选择角色', stage?.loading ? '角色出现在舞台后即可选择动作。' : '从左侧选择角色，即可浏览它能做的所有动作。'));
+      host.replaceChildren(emptyState(stage?.loading ? localizeText("正在打开角色") : localizeText("选择角色"), stage?.loading ? localizeText("角色出现在舞台后即可选择动作。") : localizeText("从左侧选择角色，即可浏览它能做的所有动作。")));
       return;
     }
     if (!sections.length) {
@@ -456,12 +461,12 @@ export function createCastBrowser({
       if (!query && !own.length && !matched.length && !saved.length && settled) {
         // Rigged-but-unanimated models (auto-rigged exports) are common; say what is missing.
         const others = Number(scan.incompatible) || 0;
-        host.replaceChildren(emptyState('这个角色还没有可播放的动作', others
-          ? '模型不带动作；项目里另有 ' + others + ' 段动作骨架或参考姿势不同，需要先重定向，可在“修改”里交给 Agent。'
-          : '模型不带动作，项目里也没有骨架一致的动作。导入同一骨架导出的 GLB 动作，或交给 Agent 重定向。'));
+        host.replaceChildren(emptyState(localizeText("这个角色还没有可播放的动作"), others
+          ? localizeText("模型不带动作；项目里另有 ") + others + localizeText(" 段动作骨架或参考姿势不同，需要先重定向，可在“修改”里交给 Agent。")
+          : localizeText("模型不带动作，项目里也没有骨架一致的动作。导入同一骨架导出的 GLB 动作，或交给 Agent 重定向。")));
         return;
       }
-      host.replaceChildren(emptyState(query ? '没有找到“' + query + '”' : '这个类别暂无动作', query ? '试试中文名、英文名或原始动作名。' : '换个类别，或等待匹配完成。'));
+      host.replaceChildren(emptyState(query ? localizeText("没有找到“") + query + '”' : localizeText("这个类别暂无动作"), query ? localizeText("试试中文名、英文名或原始动作名。") : localizeText("换个类别，或等待匹配完成。")));
       return;
     }
     host.replaceChildren(...sections.map(drawSection));
@@ -476,17 +481,17 @@ export function createCastBrowser({
     if (handoff) {
       const count = (stage?.plans || []).filter(plan => !plan.integration).length;
       handoff.hidden = !count || !stage?.ready || Boolean(stage?.replacement);
-      handoff.textContent = '交给 Agent 接入 · ' + count;
+      handoff.textContent = localizeText("交给 Agent 接入 · ") + count;
     }
     if (!banner) return;
     const trial = stage?.replacement;
     banner.hidden = !trial;
     if (!trial) { replacementScroll = false; return; }
-    const cancel = el('button', '退出', 'text-button');
+    const cancel = el('button', localizeText("退出"), 'text-button');
     cancel.type = 'button'; cancel.onclick = () => void onCancelReplacement?.();
-    const message = trial.error || (trial.pending?'正在读取替换动作…':trial.preview?
-      '「' + trial.targetLabel + '」正在对比 ' + trial.sourceLabel:'为「' + trial.targetLabel + '」选择替换动作');
-    const preview = el('a','查看试播','ab-view-trial'); preview.href='#replacementPreviewBar';
+    const message = trial.error || (trial.pending?localizeText("正在读取替换动作…"):trial.preview?
+      '「' + trial.targetLabel + localizeText("」正在对比 ") + trial.sourceLabel:localizeText("为「") + trial.targetLabel + localizeText("」选择替换动作"));
+    const preview = el('a',localizeText("查看试播"),'ab-view-trial'); preview.href='#replacementPreviewBar';
     banner.replaceChildren(el('span',message),...(trial.preview?[preview]:[]),cancel);
   }
 
@@ -501,8 +506,8 @@ export function createCastBrowser({
     node.dataset.section = section.id;
     const head = el('header', undefined, 'ab-section-head');
     head.append(el('h3', section.title), el('span', String(section.rows.length), 'ab-section-count'));
-    if (section.id === 'matched') head.append(el('p', '来自项目其他文件，骨架与静止姿态一致，可直接预览。'));
-    if (section.id === 'saved') head.append(el('p', '已加入常用的固定版本。'));
+    if (section.id === 'matched') head.append(el('p', localizeText("来自项目其他文件，骨架与静止姿态一致，可直接预览。")));
+    if (section.id === 'saved') head.append(el('p', localizeText("已加入常用的固定版本。")));
     const grid = el('div', undefined, 'ab-grid');
     const limit = pages[section.id] || PAGE;
     for (const row of section.rows.slice(0, limit)) grid.append(actionItem(row));
@@ -510,7 +515,7 @@ export function createCastBrowser({
     if (section.rows.length > limit) {
       const sentinel = el('div', undefined, 'ab-sentinel');
       sentinel.dataset.section = section.id;
-      const more = el('button', '显示更多 · 还有 ' + (section.rows.length - limit) + ' 个', 'ab-more');
+      const more = el('button', localizeText("显示更多 · 还有 ") + (section.rows.length - limit) + localizeText(" 个"), 'ab-more');
       more.type = 'button';
       more.onclick = () => { pages[section.id] = limit + PAGE * 2; draw(); };
       sentinel.append(more);
@@ -537,16 +542,16 @@ export function createCastBrowser({
       node.onclick = async () => { try { await action(); } catch (error) { onError(error); } };
       controls.append(node);
     };
-    control('⇄ 替换', '替换 ' + row.name, () => onReplace(row.name));
-    if (canPreviewPlan) control('对比方案', '对比 ' + row.name + ' 的替换方案', () => onReplace(row.name,plan));
-    if (plan && !stage?.replacement) control('原动作', '播放 ' + row.name + ' 的原动作', () => choose(row));
+    control(localizeText("⇄ 替换"), localizeText("替换 ") + row.name, () => onReplace(row.name));
+    if (canPreviewPlan) control(localizeText("对比方案"), localizeText("对比 ") + row.name + localizeText(" 的替换方案"), () => onReplace(row.name,plan));
+    if (plan && !stage?.replacement) control(localizeText("原动作"), localizeText("播放 ") + row.name + localizeText(" 的原动作"), () => choose(row));
     if (plan && !plan.integration && !stage?.replacement && onWithdrawReplacement) {
-      control('撤回', '撤回 ' + row.name + ' 的替换方案', () => onWithdrawReplacement(plan));
+      control(localizeText("撤回"), localizeText("撤回 ") + row.name + localizeText(" 的替换方案"), () => onWithdrawReplacement(plan));
     }
     item.append(controls);
     if (plan) {
-      const state = plan.integration ? '已接入' : !canPreviewPlan ? '需重新确认' : '待接入';
-      const caption = el('span', (plan.integration?'已替换为 ':'拟替换为 ') +
+      const state = plan.integration ? localizeText("已接入") : !canPreviewPlan ? localizeText("需重新确认") : localizeText("待接入");
+      const caption = el('span', (plan.integration?localizeText("已替换为 "):localizeText("拟替换为 ")) +
         [plan.source.clip,plan.source.sourceName].filter(Boolean).join(' · '), 'ab-plan-label');
       caption.title = caption.textContent;
       const planStatus=el('div',undefined,'ab-plan-status');
@@ -586,13 +591,15 @@ export function createCastBrowser({
     // Saved recipes carry no duration; an unknown length is omitted, not shown as 0s.
     if (row.duration > 0) media.append(el('span', formatSeconds(row.duration), 'ac-duration'));
     if (row.info.loop) media.append(icon('loop', 'ac-loop'));
-    if (row.kind === 'matched' && row.source.presetVariant) media.append(el('span', '其他版本', 'ac-badge'));
+    if (row.kind === 'matched' && row.source.presetVariant) media.append(el('span', localizeText("其他版本"), 'ac-badge'));
     if (row.kind === 'saved') media.append(el('span', 'v' + row.source.number, 'ac-badge'));
     media.append(el('span', undefined, 'ac-playing'));
     const text = el('span', undefined, 'ac-text');
-    text.append(el('b', row.label), el('small', row.info.title && row.info.title !== row.label ? row.info.title : row.name));
+    text.append(el('b', row.label));
+    const rawTitle = row.info.title && row.info.title !== row.label ? row.info.title : row.name;
+    if (rawTitle !== row.label || interfaceLanguage!=='en') text.append(el('small',rawTitle));
     button.append(media, text);
-    button.title = row.name + ' · ' + categoryLabel(row.info.category) + (row.duration > 0 ? ' · ' + formatSeconds(row.duration) : '') + (row.source.sourceName ? '\n来源：' + row.source.sourceName : '');
+    button.title = row.name + ' · ' + categoryLabel(row.info.category) + (row.duration > 0 ? ' · ' + formatSeconds(row.duration) : '') + (row.source.sourceName ? localizeText("\n来源：") + row.source.sourceName : '');
     button.onclick = () => choose(row);
     if (hoverCapable) {
       button.onpointerenter = () => scheduleHover(button, row);

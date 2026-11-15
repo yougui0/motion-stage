@@ -33,8 +33,21 @@ test('Windows executable lookup respects case-insensitive Path and PATHEXT, and 
 
 test('Windows standard Blender installations are discovered by version without requiring PATH',async()=>{
  const wanted='C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe';
- const resolved=await blenderExecutable({platform:'win32',env:{ProgramFiles:'C:\\Program Files'},readDirectory:async()=>['Blender 4.2','Blender 5.2'].map(name=>({name,isDirectory:()=>true})),resolveProgram:(name,options)=>resolveExecutable(name,{...options,fileStat:filesAt([wanted]),fileAccess:async()=>{}})});
+ const resolved=await blenderExecutable({platform:'win32',env:{ProgramFiles:'C:\\Program Files'},readUserSetting:async()=>undefined,readDirectory:async()=>['Blender 4.2','Blender 5.2'].map(name=>({name,isDirectory:()=>true})),resolveProgram:(name,options)=>resolveExecutable(name,{...options,fileStat:filesAt([wanted]),fileAccess:async()=>{}})});
  assert.equal(resolved,wanted);
+});
+
+test('Windows Blender discovery reads the saved user setting when the process did not inherit it',async()=>{
+ const saved='D:\\Blender Portable\\blender.exe',override='C:\\Blender Test\\blender.exe';
+ let reads=0;
+ const options={
+  platform:'win32',env:{},readUserSetting:async()=>{reads++;return saved;},
+  resolveProgram:(name,settings)=>resolveExecutable(name,{...settings,fileStat:filesAt([saved,override]),fileAccess:async()=>{}}),
+ };
+ assert.equal(await blenderExecutable(options),saved);
+ assert.equal(await blenderExecutable({...options,env:{blender_executable:override}}),override);
+ assert.equal(await blenderExecutable({...options,explicit:override}),override);
+ assert.equal(reads,1);
 });
 
 test('npm Codex CMD shim resolves to Node without shell expansion of arguments or install paths',async()=>{

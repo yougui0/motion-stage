@@ -125,7 +125,21 @@ export async function stopProcessTree(child,{signal='SIGTERM',group=false,platfo
  }else try{if(group)process.kill(-child.pid,signal);else child.kill(signal);}catch{}
 }
 
-export async function blenderExecutable({explicit,env=process.env,platform=process.platform,readDirectory=readdir,resolveProgram=resolveExecutable}={}){
+async function windowsBlenderSetting(env,execProgram=execExecutable){
+ const registry=hostPath.win32.join(getEnv(env,'SystemRoot')||'C:\\Windows','System32','reg.exe');
+ try{
+  const {stdout}=await execProgram(registry,['query','HKCU\\Environment','/v','BLENDER_EXECUTABLE'],{windowsHide:true,timeout:2000,maxBuffer:65536});
+  const match=stdout.match(/^\s*BLENDER_EXECUTABLE[ \t]+(REG_SZ|REG_EXPAND_SZ)[ \t]+([^\r\n]+)$/im);
+  if(!match)return undefined;
+  const value=match[2].trim();
+  return match[1]==='REG_EXPAND_SZ'?value.replace(/%([^%]+)%/g,(original,key)=>getEnv(env,key)??original):value;
+ }catch{return undefined;}
+}
+
+export async function blenderExecutable({explicit,env=process.env,platform=process.platform,readDirectory=readdir,resolveProgram=resolveExecutable,readUserSetting=windowsBlenderSetting}={}){
+ // A server started by a long-lived Windows app can inherit an older environment.
+ const configured=explicit||getEnv(env,'BLENDER_EXECUTABLE')||(platform==='win32'?await readUserSetting(env):undefined);
+ if(configured)return resolveProgram('blender',{explicit:configured,env,platform});
  const p=pathsFor(platform),candidates=[];
  if(platform==='win32'){
   for(const root of [getEnv(env,'ProgramFiles'),getEnv(env,'ProgramFiles(x86)'),getEnv(env,'LOCALAPPDATA')&&p.join(getEnv(env,'LOCALAPPDATA'),'Programs')].filter(Boolean)){
@@ -135,5 +149,5 @@ export async function blenderExecutable({explicit,env=process.env,platform=proce
   }
  }else if(platform==='darwin')candidates.push('/Applications/Blender.app/Contents/MacOS/Blender',p.join(homedir(),'Applications/Blender.app/Contents/MacOS/Blender'),'/opt/homebrew/bin/blender','/usr/local/bin/blender');
  else candidates.push('/usr/bin/blender','/usr/local/bin/blender','/snap/bin/blender');
- return resolveProgram('blender',{explicit:explicit||getEnv(env,'BLENDER_EXECUTABLE'),env,platform,candidates});
+ return resolveProgram('blender',{env,platform,candidates});
 }

@@ -13,7 +13,7 @@ import {readFile,stat,realpath} from 'node:fs/promises';
 import {createReadStream} from 'node:fs';
 import {extname} from 'node:path';
 import {randomBytes} from 'node:crypto';
-import {ROOT,json,inside,atomic,validateNote,importAsset,readMarks,sha,withWorkspaceLock,hasClip,readProject,projectView,modelSlots,activateModel} from './core.mjs';
+import {ROOT,json,inside,atomic,validateNote,importAsset,readMarks,sha,withWorkspaceLock,hasClip,readProject,projectView,modelSlots,activateModel,removeModel} from './core.mjs';
 import {catalogPage,startCatalogScan,openCatalogAsset,stopCatalogScan} from './asset-catalog.mjs';
 import {characterPage,castRoster,characterModelBytes,openCharacter,associateCharacterMotion,saveCharacterMap} from './character-library.mjs';
 import {listJobs,getJob,createJob,cancelJob,localEditJob,reviewJob,inspectSlot,diagnoseFootSlip,importBytes,replyJob,updateJobProgress,getJobProjectContext,previewProjectContext,retryJob,restoreJob,interruptJob,jobArtifacts,reconcileExecutions} from './jobs.mjs';
@@ -24,6 +24,7 @@ import {offlinePreviewStatus,runtimePreviewStatus,runtimePreviewHandoff} from '.
 import {createManagedPreview} from './managed-preview.mjs';
 import {readJobIndex,jobsPage,activeJobStates} from './job-index.mjs';
 import * as jobLifecycle from './jobs.mjs';
+import {saveAnnotationSnapshot,MAX_ANNOTATION_BYTES} from './annotation-snapshots.mjs';
 
 async function studioJobIndex(work){return withWorkspaceLock(work,async()=>{let index=await readJobIndex(work);if(jobLifecycle.reconcileExecutions&&(await jobLifecycle.reconcileExecutions(work,{index})).changed)index=await readJobIndex(work);return index;});}
 
@@ -103,6 +104,9 @@ export async function serve(work,port=5178,options={}){
    if(p==='/api/export'&&req.method==='GET')return send(200,{...await json(await inside(work,'feedback.json')),marks:Object.values((await readMarks(work)).reviews),jobs:await listJobs(work),version:2});
    if(p.startsWith('/api/')&&req.method!=='GET'){
     if(req.headers['x-motion-token']!==token)return send(403,{error:'请刷新页面后重试'});
+    if(p==='/api/annotation-snapshots'&&req.method==='POST'){
+     return send(200,await saveAnnotationSnapshot(work,await body(req,MAX_ANNOTATION_BYTES)));
+    }
     const data=await body(req,p.startsWith('/api/assets/')?200*1024*1024:12*1024*1024);
     if(p.startsWith('/api/runtime-preview/')&&req.method==='POST'){
      const input=JSON.parse(data);
@@ -135,6 +139,12 @@ export async function serve(work,port=5178,options={}){
     if(p==='/api/catalog/scan'&&req.method==='POST')return send(200,await startCatalogScan(work,{force:true}));
     const modelName=p.match(/^\/api\/models\/([a-zA-Z0-9_-]{1,80})\/name$/);if(modelName&&req.method==='POST')return send(200,await withWorkspaceLock(work,async()=>{const input=JSON.parse(data),cfg=await readProject(work),m=cfg.models[modelName[1]];if(!m||typeof input.name!=='string'||!input.name.trim()||input.name.length>160)throw Error('模型名称需为 1–160 个字符');if(input.expectedHeadRevision!==m.headRevision||input.expectedName!==m.name)throw Error('模型版本已变化，请刷新后重试');m.name=input.name.trim();cfg.revision=(cfg.revision||0)+1;await atomic(await inside(work,'project.json'),cfg);return {project:projectView(cfg,m.id)};}));
     const storedOpen=p.match(/^\/api\/models\/([a-zA-Z0-9_-]{1,80})\/open$/);if(storedOpen&&req.method==='POST')return send(200,{project:await activateModel(work,storedOpen[1])});
+    const storedModel=p.match(/^\/api\/models\/([a-zA-Z0-9_-]{1,80})$/);
+    if(storedModel&&req.method==='DELETE'){
+     const result=await removeModel(work,storedModel[1],JSON.parse(data));
+     studioEvents.changed();
+     return send(200,result);
+    }
     const modelOpen=p.match(/^\/api\/catalog\/([a-zA-Z0-9_-]{1,80})\/open$/);
     if(modelOpen&&req.method==='POST')return send(200,{project:await openCatalogAsset(work,modelOpen[1],JSON.parse(data.length?data:'{}'))});
     if(p==='/api/characters/map'&&req.method==='POST')return send(200,await saveCharacterMap(work,JSON.parse(data)));
@@ -240,6 +250,7 @@ export async function serve(work,port=5178,options={}){
    else if(p.startsWith('/case/')){root=ROOT+'/assets/case';name=p.slice(6);}
    else if(p.startsWith('/workspace/assets/')){root=work;name=p.slice(11);if(!/^assets\/[a-f0-9]{64}\.glb$/.test(name))return send(404,{error:'Not found'});}
    else if(/^\/workspace\/jobs\/[a-f0-9-]{36}\/view\.png$/.test(p)){root=work;name=p.slice(11);}
+   else if(/^\/workspace\/annotations\/[a-f0-9]{64}\.png$/.test(p)){root=work;name=p.slice(11);}
    else if(p.startsWith('/workspace/snapshots/')){root=work;name=p.slice(11);if(!/^snapshots\/[-\w]+\.png$/.test(name))return send(404,{error:'Not found'});}
    else if(p.startsWith('/workspace/thumbnails/')){root=work;name=thumbnailPath(p);if(!name)return send(404,{error:'Not found'});}
    else return send(404,{error:'Not found'});
@@ -248,7 +259,7 @@ export async function serve(work,port=5178,options={}){
    res.writeHead(200,{'Content-Type':MIME[extname(file)]||'application/octet-stream','Content-Length':s.size,'Cache-Control':immutable?'private, max-age=31536000, immutable':'no-store','X-Content-Type-Options':'nosniff'});
    if(req.method==='HEAD')return res.end();
    const stream=createReadStream(file);res.on('close',()=>stream.destroy());stream.on('error',()=>res.destroy());stream.pipe(res);
-  }catch(e){if(!res.headersSent)send(e.code==='ENOENT'?404:['MODEL_JOB_ACTIVE','AGENT_BUSY'].includes(e.code)?409:400,{error:e.message,...(e.code?{code:e.code}:{}),...(e.jobId?{jobId:e.jobId}:{})});else res.end();}
+  }catch(e){if(!res.headersSent)send(['ENOENT','MODEL_REMOVED'].includes(e.code)?404:['MODEL_JOB_ACTIVE','AGENT_BUSY','MODEL_CHANGED'].includes(e.code)?409:400,{error:e.message,...(e.code?{code:e.code}:{}),...(e.jobId?{jobId:e.jobId}:{})});else res.end();}
  });
  server.once('close',()=>{if(workspaceServers.get(serverKey)===server)workspaceServers.delete(serverKey);serverCloseCleanup();});
  const close=server.close.bind(server);server.close=callback=>{studioEvents.close();workerGeneration++;connecting=null;workerAbort?.abort();Promise.all([workerRun,managedPreview.close(),stopCharacterActionDiscovery(work),stopCatalogScan(work),...[...children].filter(c=>c.listening).map(c=>new Promise(r=>c.close(r)))]).catch(()=>{}).finally(()=>close(callback));return server;};

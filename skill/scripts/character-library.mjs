@@ -135,6 +135,7 @@ export async function castRoster(work,{scope='all'}={}){
  const data=await library(work,{includeCandidates:scope!=='confirmed'}),entries=[],seen=new Set();
  const workspacePortrait=asset=>asset&&(asset.meshCount||0)>0?{source:'workspace',identity:asset.sha256,asset:{sha256:asset.sha256,file:asset.file,bytes:asset.bytes}}:null;
  for(const r of data.rows){
+  if(Object.hasOwn(data.cfg.removedModels||{},r.id))continue;
   seen.add(r.id);let portrait=workspacePortrait(modelSlots(data.cfg,r.id).baseline);
   if(!portrait&&['glb','gltf'].includes(r.format)&&r.status==='available'&&r.profile&&r.portraitIdentity)portrait={source:'project',identity:r.portraitIdentity,url:'/api/characters/'+encodeURIComponent(r.id)+'/model'};
   entries.push({id:r.id,kind:'character',name:r.name,confirmed:Boolean(r.confirmed),opened:Boolean(r.opened),status:r.status,format:r.format,relativePath:r.relativePath||null,clipCount:r.metadata?.clips?.length||0,embeddedCount:r.embeddedCount||0,externalCount:r.externalCount||0,portrait});
@@ -165,6 +166,7 @@ async function prepareCharacter(work,id,refreshSource){
  const initial=await readProject(work),old=initial.models[id];
  if(old?.origin==='character'&&modelSlots(initial,id).baseline&&!refreshSource)return activateModel(work,id);
  const data=await library(work,{onlyId:id}),row=data.rows.find(r=>r.id===id);requireValue(row?.profile&&data.link?.exists,'角色关联不存在；已有预览可继续打开');
+ if(Object.hasOwn(initial.removedModels||{},id))return activateModel(work,id,{restoreRemoved:true});
  const profile=row.profile,root=data.link.root;let base,baseSource;
  if(extname(profile.model).toLowerCase()==='.fbx'){
   const entry=data.catalog.entries.find(e=>e.relativePath===profile.model);requireValue(entry,'请先刷新目录，再打开 FBX 角色');

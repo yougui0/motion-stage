@@ -194,6 +194,15 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .text-button:hover { color: #346ac3; background: transparent; }
 .preview-options .text-button { font-size: 11px; gap: 5px; white-space: nowrap; }
 .preview-options .icon { width: 13px; height: 13px; }
+.viewport-review-tools { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; margin-bottom: 5px; }
+.viewport-review-tools .text-button { padding: 4px 10px; min-height: 30px; }
+#wireframeToggle[aria-pressed="true"] { color: #224c9c; background: #dce8ff; }
+.compact-dialog.annotation-dialog { width: min(900px, 94vw); max-width: 94vw; }
+.annotation-toolbar { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+.annotation-toolbar button { min-height: 32px; padding: 4px 8px; font-size: 12px; }
+.annotation-toolbar button[aria-pressed="true"] { background: #dce8ff; color: #224c9c; }
+#annotationCanvas, #annotationImage { display: block; max-width: 100%; max-height: 54dvh; width: auto; height: auto; margin: 0 auto; border-radius: 8px; }
+#annotationCanvas { cursor: crosshair; touch-action: none; }
 .stage { position: relative; flex: 1; min-height: 200px; overflow: hidden; border: 1px solid #263143; border-radius: 16px; background: #151d2a; box-shadow: 0 7px 18px #26375218, 0 1px 2px #15243b1c, inset 0 1px 0 #ffffff1a; }
 .stage-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 3; background: radial-gradient(ellipse at 50% 40%, transparent 38%, #070c162e); box-shadow: inset 0 0 45px #0000001a; }
 .stage > canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; touch-action: none; }
@@ -230,6 +239,9 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .stage-error>span { font-size: 18px; color: #e6b8aa; }
 .stage-error p { max-width: 420px; color: #98a9c2; font-size: 13px; }
 .stage-error button { color: #c3d6ff; border-color: #7ca4ef55; }
+#stageEmpty { background: #eef1f5; color: #303a49; }
+#stageEmpty>span, #stageEmpty>p { color: inherit; }
+#stageEmpty>button { color: #245693; border-color: #a9bdd7; }
 
 /* A precise timeline, with quiet, tactile transport controls. */
 .transport { flex-shrink: 0; padding: 12px 0 0; }
@@ -400,6 +412,12 @@ dialog p { font-size: 13px; color: #656e7d; line-height: 1.85; }
 .compact-dialog>p { margin-top: 16px; }
 .compact-dialog>select { width: 100%; margin-bottom: 12px; }
 .compact-dialog>.primary-button { margin-top: 20px; }
+.asset-summary-actions, .remove-model-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.remove-model-actions { justify-content: flex-end; margin-top: 20px; }
+.asset-summary-actions .delete-model { color: #a32936; }
+.asset-summary-actions .delete-model:disabled { color: #656e7d; }
+.remove-model-name { font-weight: 650; overflow-wrap: anywhere; }
+#confirmRemoveModel { width: auto; background: #a32936; border-color: #a32936; color: white; }
 #replacementPreviewBar b { overflow-wrap: anywhere; }
 #replacementPreviewBar > div { flex-wrap: wrap; }
 #replacementPreviewBar [aria-pressed="true"] { border-color: #7465da; color: #5445b8; }
@@ -816,10 +834,10 @@ dialog p { font-size: 13px; color: #656e7d; line-height: 1.85; }
 .runtime-stage-notice button { pointer-events: auto; }
 .runtime-stage-status { padding: 5px 9px; border-radius: 6px; background: #201e28ee; color: #fff; font-size: 12px; }
 .runtime-handoff-text { display: block; width: 100%; height: clamp(9rem, 40vh, 22rem); margin-top: 12px; resize: vertical; }
-.stage-column:has(.runtime-stage-active) > .preview-header { display: none; }
+.preview-region:has(.runtime-stage-active) > .preview-header { display: none; }
 .task-panel[inert] { opacity: .65; }
 .runtime-stage-active ~ .transport, .runtime-stage-active ~ .observation-conditions,
-.runtime-stage-active ~ .foot-diagnostics, .runtime-stage-active ~ .stage-footnote { display: none; }
+.runtime-stage-active ~ .foot-diagnostics, .stage-column:has(.runtime-stage-active) > .stage-footnote { display: none; }
 .runtime-stage-transport:not([hidden]) { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
 .runtime-stage-transport input { min-width: 0; flex: 1; }
 .runtime-stage-transport output { white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 12px; }

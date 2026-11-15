@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
+import {t as localizeText} from '../../assets/viewer/i18n.mjs';
 import {activeStudioJob,currentStudioCandidate,currentComparison,canFollowCandidate} from '../../assets/viewer/studio-sync.mjs';
 import {createDraftSync} from '../../assets/viewer/draft-sync.mjs';
 import {createViewState,draftStorageKey,saveViewDraft,readViewDraft} from '../../assets/viewer/view-state.mjs';
@@ -11,7 +12,7 @@ const app=await readFile(new URL('../../assets/viewer/app.js',import.meta.url),'
 function productionFunction(from,to){const start=app.indexOf(from),end=app.indexOf(to,start);assert.ok(start>=0&&end>start,'production function boundaries must exist');return app.slice(start,end);}
 const pollSource=productionFunction('let polling=false,pollErrors=0,','\nfunction commitJobResult(');
 const pairSource=productionFunction('async function loadPair(','\nfunction resolveClip(');
-const persistSource=productionFunction('function persistView(){',"\nfor(const id of ['request'");
+const persistSource=productionFunction('function persistView(',"\nfor(const id of ['request'");
 const refreshSource=productionFunction('async function refreshModels(','\nasync function restoreContext(');
 const restoreDraftSource=productionFunction('async function restoreModelDraft(){','\nlet nextModelOpen');
 const openSource=productionFunction('let nextModelOpen,modelOpenFlight;','\nfunction drawCatalog(');
@@ -34,7 +35,7 @@ test('autosave, visibility changes and unload cannot overwrite a draft during a 
  assert.equal(saveViewDraft(storage,view,state,()=>draft('A','Original A draft')),true);
  storage.setItem(draftStorageKey('/review','B'),JSON.stringify(draft('B','Important B draft')));
  view.select('B');state.switching=true;state.loading=true;state.project={activeAssetId:'B'};
- const ctx=vm.createContext({callerKey,restoredDelivery,renderLoop:null,state,viewState:view,localStorage:storage,saveViewDraft,context:()=>({assetId:view.loadedAssetId,asset:{sha256:'A-version'}}),$:()=>({value:''})});
+ const ctx=vm.createContext({localizeText,callerKey,restoredDelivery,renderLoop:null,state,viewState:view,localStorage:storage,saveViewDraft,context:()=>({assetId:view.loadedAssetId,asset:{sha256:'A-version'}}),$:()=>({value:''})});
  vm.runInContext(persistSource,ctx);
  for(let i=0;i<3;i++)assert.equal(vm.runInContext('persistView()',ctx),false);
  assert.equal(readViewDraft(storage,{workspace:'/review',assetId:'B'}).request,'Important B draft');
@@ -109,7 +110,7 @@ function installPoll(ctx){
  vm.runInContext(pollSource,ctx);
 }
 function pollHarness(view,state,response){
- let redraws=0;const ctx=vm.createContext({callerKey,restoredDelivery,renderLoop:null,viewState:view,state,api:async()=>response.promise,drawAgent:()=>redraws++,drawJobs:()=>redraws++,updateDisplay:()=>redraws++,notice:()=>redraws++});
+ let redraws=0;const ctx=vm.createContext({localizeText,callerKey,restoredDelivery,renderLoop:null,viewState:view,state,api:async()=>response.promise,drawAgent:()=>redraws++,drawJobs:()=>redraws++,updateDisplay:()=>redraws++,notice:()=>redraws++});
  installPoll(ctx);
  return {run:()=>vm.runInContext('pollStudio()',ctx),redraws:()=>redraws};
 }
@@ -140,7 +141,7 @@ test('production polling applies a current response and retains other-model jobs
 test('production pair loading disposes stale completed geometry without committing it into a newer view',async()=>{
  const {view}=loadedView('A'),ticket=view.beginLoad(),one=deferred(),two=deferred(),released=[],committed=[];
  const state={models:{baseline:{meta:{sha256:'old',assetId:'A'}},candidate:{meta:{sha256:'old',assetId:'A'}}}};
- const ctx=vm.createContext({callerKey,restoredDelivery,renderLoop:null,state,slots:['baseline','candidate'],appearance:{mode:'neutral'},cacheKey:()=>'',recentModels:new Map(),setModelClip(){},loadSlot:slot=>slot==='baseline'?one.promise:two.promise,dispose:model=>released.push(model.id),commitModel:(slot,model)=>committed.push([slot,model.id])});
+ const ctx=vm.createContext({localizeText,callerKey,restoredDelivery,renderLoop:null,state,slots:['baseline','candidate'],appearance:{mode:'neutral'},cacheKey:()=>'',recentModels:new Map(),setModelClip(){},loadSlot:slot=>slot==='baseline'?one.promise:two.promise,dispose:model=>released.push(model.id),commitModel:(slot,model)=>committed.push([slot,model.id])});
  vm.runInContext(pairSource,ctx);ctx.wanted={baseline:{sha256:'new',assetId:'A'},candidate:{sha256:'new',assetId:'A'}};ctx.current=()=>view.isUnchanged(ticket,'A');
  const pending=vm.runInContext('loadPair(wanted,false,current)',ctx);view.select('B');one.resolve({id:'A-baseline',clips:[]});two.resolve({id:'A-candidate',clips:[]});
  assert.equal(await pending,false);assert.deepEqual(released.sort(),['A-baseline','A-candidate']);assert.equal(committed.length,0);assert.equal(state.models.baseline.meta.sha256,'old');
@@ -148,7 +149,7 @@ test('production pair loading disposes stale completed geometry without committi
 
 test('production pair loading releases successful siblings when one load fails, retaining the previous pair',async()=>{
  const released=[],state={models:{baseline:{meta:{sha256:'old'}},candidate:{meta:{sha256:'old'}}}};
- const ctx=vm.createContext({callerKey,restoredDelivery,renderLoop:null,state,slots:['baseline','candidate'],appearance:{mode:'neutral'},cacheKey:()=>'',recentModels:new Map(),setModelClip(){},loadSlot:slot=>slot==='baseline'?Promise.resolve({id:'prepared',clips:[]}):Promise.reject(Error('damaged geometry')),dispose:model=>released.push(model.id),commitModel:()=>assert.fail('must not commit partial pair')});
+ const ctx=vm.createContext({localizeText,callerKey,restoredDelivery,renderLoop:null,state,slots:['baseline','candidate'],appearance:{mode:'neutral'},cacheKey:()=>'',recentModels:new Map(),setModelClip(){},loadSlot:slot=>slot==='baseline'?Promise.resolve({id:'prepared',clips:[]}):Promise.reject(Error('damaged geometry')),dispose:model=>released.push(model.id),commitModel:()=>assert.fail('must not commit partial pair')});
  vm.runInContext(pairSource,ctx);ctx.wanted={baseline:{sha256:'new',file:'new.glb'},candidate:{sha256:'new',file:'new.glb'}};
  await assert.rejects(vm.runInContext('loadPair(wanted)',ctx),/damaged geometry/);assert.deepEqual(released,['prepared']);assert.equal(state.models.candidate.meta.sha256,'old');
 });
@@ -162,7 +163,7 @@ function selectionHarness({storageFailure,existingA=false}={}){
  if(existingA)storage.setItem(draftStorageKey('/review','A'),JSON.stringify({...draft('A','Older persisted A request'),preserve:'Older A preserve'}));
  if(storageFailure==='quota')storage.setItem=()=>{throw Error('QuotaExceededError');};
  const requestLog=[];
- const ctx=vm.createContext({callerKey,restoredDelivery,renderLoop:null,castBrowser:null,slots:['baseline','candidate'],setFootRepairDraft:repair=>{state.footRepair=repair;},workspaceDrafts:createDraftSync({load:async()=>({revision:0,draft:null}),save:async(_id,input)=>({revision:input.expectedRevision+1})}),state,viewState:view,localStorage:storage,saveViewDraft,readViewDraft,
+ const ctx=vm.createContext({localizeText,callerKey,restoredDelivery,renderLoop:null,castBrowser:null,slots:['baseline','candidate'],setFootRepairDraft:repair=>{state.footRepair=repair;},workspaceDrafts:createDraftSync({load:async()=>({revision:0,draft:null}),save:async(_id,input)=>({revision:input.expectedRevision+1})}),state,viewState:view,localStorage:storage,saveViewDraft,readViewDraft,
   $:field,clearTimeout,history:{replaceState(){}},location:{href:'http://local/?asset=A'},
   api:async(path,method,body,request)=>{
    requestLog.push({path,method,body,request});
@@ -246,7 +247,7 @@ test('startup restores a saved accepted review, while an intentional new draft s
   const {view}=loadedView('A'),state=pollingState('A'),shown=[],errors=[];
   const job={id:'accepted-task',assetId:'A',state:'complete',candidate:{sha256:'candidate'},inputs:{baseline:{sha256:'base'}},review:{decision:'accept-candidate'}};
   Object.assign(state,{initialized:false,explicitCompose,panelMode:explicitCompose?'compose':'task',selectedJob:job.id});
-  const ctx=vm.createContext({state,viewState:view,api:async()=>({project:{activeAssetId:'A',slots:{baseline:{sha256:'base'},candidate:{sha256:'candidate'}}},jobs:[job]}),drawAgent(){},drawJobs(){},updateDisplay(){},showCandidate:async j=>{shown.push(j.id);return true;},notice:e=>errors.push(e)});
+  const ctx=vm.createContext({localizeText,state,viewState:view,api:async()=>({project:{activeAssetId:'A',slots:{baseline:{sha256:'base'},candidate:{sha256:'candidate'}}},jobs:[job]}),drawAgent(){},drawJobs(){},updateDisplay(){},showCandidate:async j=>{shown.push(j.id);return true;},notice:e=>errors.push(e)});
   installPoll(ctx);vm.runInContext('pollErrors=1',ctx);await vm.runInContext('pollStudio()',ctx);
   assert.deepEqual(errors,[]);assert.equal(state.panelMode,explicitCompose?'compose':'task');assert.deepEqual(shown,explicitCompose?[]:['accepted-task']);
  }
@@ -256,7 +257,7 @@ test('background completion keeps browsing, external trials and compose drafts i
  for(const mode of ['library','compose','trial','history']){
   const {view}=loadedView('A'),state=pollingState('A'),shown=[],errors=[];
   const job={id:'existing-A',assetId:'A',state:'complete',candidate:{sha256:'new',file:'new.glb'},inputs:{baseline:{sha256:'base'}}};Object.assign(state,{ready:true,panelMode:mode==='compose'?'compose':'task',selectedJob:job.id,archivedJobId:mode==='history'?'prior-task':null,motionPreview:mode==='trial'?{}:null,models:{candidate:{meta:{sha256:'old'}}}});
-  const ctx=vm.createContext({state,viewState:view,castBrowser:{mode:()=>mode==='library'?'library':'studio'},api:async()=>({project:{activeAssetId:'A',slots:{candidate:{sha256:'new',file:'new.glb'}}},jobs:[job]}),drawAgent(){},drawJobs(){},updateDisplay(){},toast(){},refreshModels:()=>assert.fail('must keep the current scene'),showCandidate:j=>shown.push(j),notice:e=>errors.push(e)});
+  const ctx=vm.createContext({localizeText,state,viewState:view,castBrowser:{mode:()=>mode==='library'?'library':'studio'},api:async()=>({project:{activeAssetId:'A',slots:{candidate:{sha256:'new',file:'new.glb'}}},jobs:[job]}),drawAgent(){},drawJobs(){},updateDisplay(){},toast(){},refreshModels:()=>assert.fail('must keep the current scene'),showCandidate:j=>shown.push(j),notice:e=>errors.push(e)});
   installPoll(ctx);vm.runInContext('pollErrors=1',ctx);await vm.runInContext('pollStudio()',ctx);assert.deepEqual(shown,[]);assert.deepEqual(errors,[]);assert.equal(ctx.workspaceCandidate().id,job.id);assert.equal(state.models.candidate.meta.sha256,'old');
  }
 });

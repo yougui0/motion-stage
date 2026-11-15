@@ -7,6 +7,7 @@ import {ROOT,atomic,inside} from './core.mjs';
 import {resolveExecutable,commandSpec,spawnOwnedProcess} from './platform-runtime.mjs';
 import {createExecution} from './execution-runtime.mjs';
 import {listQueuedJobSummaries} from './job-index.mjs';
+import {annotationFile} from './annotation-snapshots.mjs';
 import {recordProviderSession,claimJob,completeJob,failJob,getJob,updateJobProgress,updateJobActivity,interruptJob,reconcileExecutions} from './jobs.mjs';
 
 export async function probeCodex(){
@@ -54,6 +55,9 @@ async function runAgent(work,job,{signal,onState,timeoutMs=600000,provider='code
  const images=[];
  for(const ref of [job.screenshot,job.preview,job.context?.snapshot,job.evidence?.snapshot].filter(x=>typeof x==='string')){
   try{const p=await inside(work,ref);if((await stat(p)).isFile()&&/\.png$/i.test(p)){images.push(p);break;}}catch{}
+ }
+ for(const snapshot of new Set((job.feedbackPoints||[]).flatMap(p=>p.annotation?[p.annotation.snapshot]:[]))){
+  const path=await inside(work,annotationFile(snapshot));if((await stat(path)).isFile())images.push(path);
  }
  const launch=await providerCommand(provider,{dir,schemaPath,resultPath,schema,images});let structuredResult,providerError='',deepseek;
  const executionStarted=Date.now(),initialProgress=await readFile(progressPath,'utf8');

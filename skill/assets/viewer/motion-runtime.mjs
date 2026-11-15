@@ -1,3 +1,4 @@
+import {t as localizeText} from './i18n.mjs';
 // Clip data is immutable. Each target instance owns bindings/actions and pose state.
 export async function runtimeMotionClips(T,clips,resolveNode){
  const properties={rotation:'quaternion',translation:'position',scale:'scale'};
@@ -11,7 +12,7 @@ export async function runtimeMotionClips(T,clips,resolveNode){
  }
  return Promise.all(clips.map(async clip=>{
   const tracks=await Promise.all(clip.tracks.map(async track=>{
-   const node=await resolveNode(track.node),property=properties[track.path];if(!node||!property)throw Error('此动作包含需要单独适配的轨道');
+   const node=await resolveNode(track.node),property=properties[track.path];if(!node||!property)throw Error(localizeText("此动作包含需要单独适配的轨道"));
    const Class=track.path==='rotation'?T.QuaternionKeyframeTrack:T.VectorKeyframeTrack;
    const out=new Class(node.uuid+'.'+property,track.times,track.values,track.interpolation==='STEP'?T.InterpolateDiscrete:T.InterpolateLinear);
    if(track.interpolation==='CUBICSPLINE'){out.createInterpolant=function(result){return new Cubic(this.times,this.values,track.path==='rotation'?4:3,result,track.path==='rotation');};out.createInterpolant.isInterpolantFactoryMethodGLTFCubicSpline=true;}

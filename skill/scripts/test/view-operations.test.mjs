@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
+import {t as localizeText} from '../../assets/viewer/i18n.mjs';
 import {activeStudioJob,currentStudioCandidate,currentComparison,canFollowCandidate} from '../../assets/viewer/studio-sync.mjs';
 import {createViewState} from '../../assets/viewer/view-state.mjs';
 
@@ -30,7 +31,7 @@ function harness({createGate,createError,editGate,result=complete,editError,getR
   if(path==='/api/jobs/local-job')return structuredClone(getResult||{...queued,state:'failed',error:'stored failure'});
   throw Error('Unexpected API '+path);
  };
- const ctx=vm.createContext({state,viewState:view,$:field,api,setTimeout,clearTimeout,structuredClone,
+ const ctx=vm.createContext({localizeText,state,viewState:view,$:field,api,setTimeout,clearTimeout,structuredClone,
   activeTask:()=>activeStudioJob(state.jobs,state.project.activeAssetId),workspaceCandidate:()=>currentStudioCandidate(state.jobs,state.project,state.candidateJobId),
   staleWorkspaceView:()=>false,canFollowCandidate,currentComparison,candidateViewed:job=>state.models.candidate?.meta.sha256===job.candidate.sha256,viewMatchesJob:()=>false,castBrowser:{mode:()=> 'studio',draw(){}},
   document:{querySelector:()=>null},localPreview:null,runtimeStage:{active:false},undoControls:{refresh(){}},drawStudioSync(){},

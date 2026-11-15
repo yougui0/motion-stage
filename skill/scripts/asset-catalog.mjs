@@ -226,6 +226,7 @@ async function prepareCatalogAsset(work,id,{refreshSource}){
  const [catalog,link]=await Promise.all([readCatalog(work),getProjectLink(work)]);
  if(!link?.exists||link.id!==catalog.projectId)throw Error('关联的模型目录不可用，请重新关联');
  const entry=catalog.entries.find(e=>e.id===id);if(!entry)throw Error('模型不存在，请刷新目录');
+ if(Object.hasOwn(cfg.removedModels||{},id))return activateModel(work,id,{restoreRemoved:true});
  if(!['glb','gltf','fbx','json'].includes(entry.format))throw Error('此格式作为制作源保留，请导出 GLB、glTF 或带角色的 FBX');
  if(entry.status==='missing')throw Error('源文件已不存在；可继续查看之前导入的版本');
  const sourcePath=await inside(link.root,entry.relativePath),snapshot=await stableBytes(sourcePath),sourceSha=sha(snapshot.bytes);
