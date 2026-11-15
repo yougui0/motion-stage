@@ -1,18 +1,14 @@
-<img src="skill/assets/viewer/app-icon.svg" width="96" alt="动作台 MotionStage">
+<img src="skill/assets/viewer/app-icon.svg" width="80" alt="MotionStage 图标">
 
-# 动作台 MotionStage
+# MotionStage 动作台
 
-在本机浏览器里查看 3D 角色和动作，暂停、标记问题，交给 AI Agent 修改，再把候选与原版并排比较。
+在本地浏览器里审阅 3D 角色动作。逐帧查看骨骼和网格，在画面上圈出问题，把修改要求交给 Agent，再用同一时刻、同一镜头比较候选。
 
-支持 GLB / FBX、兼容动作匹配、脚滑检查和多处画面标记。右上角「…」→「界面语言」可切换简体中文和 English。
-
-此 Fork 基于 [jbang2004/motion-stage](https://github.com/jbang2004/motion-stage)，增加了随动作变形的线框、画笔批注、中键平移、可调整大小的预览视窗和素材移除。
-
-MotionStage is a local 3D character and animation review workbench. Switch to English under **… → Interface language**. To start, clone this repository and run the command below with Node.js 22+ and a WebGL2 browser.
+![新版 MotionStage 动作库，左侧是角色列表，中间是可调预览与时间轴，右侧是动作卡片](skill/assets/docs/workbench-motion-library.jpg)
 
 ## 快速开始
 
-需要 **Node.js 22+** 和支持 **WebGL2** 的浏览器。运行时已随包提供，无需 `npm install`；预览和本地微调不需要 API Key。
+准备 **Node.js 22+** 和支持 **WebGL2** 的浏览器。查看 GLB、播放自带练习人偶和本地微调可直接使用。导入 FBX 需要本机安装 **Blender 4.2+**，动作台会调用它转换预览文件。
 
 ```sh
 git clone https://github.com/yougui0/motion-stage.git
@@ -20,66 +16,47 @@ cd motion-stage
 node skill/scripts/start.mjs
 ```
 
-也可进入 `skill/`，macOS 双击 `Open MotionStage.command`，Windows 双击 `Open MotionStage.cmd`。
-首次启动自带练习人偶，自动打开浏览器；保持终端运行，`Ctrl+C` 停止。
+Windows 也可以双击 `skill/Open MotionStage.cmd`，macOS 可以双击 `skill/Open MotionStage.command`。启动后保持终端运行。右上角 **「…」→「界面语言」** 可切换简体中文或 English。
 
-直接打开自己的游戏项目（在仓库根目录运行）：
+**English** · Run the commands above with Node.js 22+ and a WebGL2 browser. Choose **… → Interface language → English** after opening the workbench. Blender 4.2+ is required for FBX import.
+
+## 查看并标记动作
+
+1. **挑选动作**。点「导入」打开角色，或从左上角「关联项目」浏览项目角色和兼容动作。点动作卡片播放，按空格暂停，用方向键逐帧查看。
+2. **检查网格和姿势**。左键拖动旋转视角，中键拖动平移，滚轮缩放。可拖动预览下方的手柄调整高度，也可以打开全屏预览。用「线框」检查变形处的三角网格，在「视角与显示」中可切换到全部网格。
+3. **标记问题**。在有问题的时刻点击「画笔批注」，用线条、箭头或圈选指出位置，补充希望怎么改。每条标记都带着当前画面、时间和镜头。可以把几处问题一起提交。
+
+![新版画笔批注编辑器，用红圈和箭头标出练习人偶的左臂，并填写修正说明](skill/assets/docs/workbench-frame-annotation.jpg)
+
+## 修改与审阅
+
+- **提交任务**。在「修改」里填写要求，选好部位和时间范围，再复制任务给当前对话。也可以选「本机后台处理」，使用已配置的 Codex CLI、Claude Code 或 DeepSeek Harness。
+- **做简单微调**。展开「本地微调」，选中有旋转轨道的部位，设置摆动幅度或局部旋转偏移，试播后生成候选。
+- **检查结果**。并排播放原动作和候选，点反馈标记可以回到同一时间和镜头。确认后选择「采用这版」「继续调整」或「不用这版」。可以下载候选 GLB。采用后可通过「接入游戏…」安排项目接入，再在游戏中验证效果。
+
+![新版候选审阅，左边显示修改前的奔跑动作，右边显示本地微调后的候选，并排对照左臂位置](skill/assets/docs/workbench-candidate-comparison.jpg)
+
+## 工作区与 Agent Skill
+
+独立使用时，素材、草稿和候选默认保存在 `~/motion-stage-workspace/`。关联游戏项目后，工作区位于 `<项目>/.motion-studio/`。通过「素材详情 → 删除素材…」可以从工作区列表移除素材。
+
+也可以在启动时直接指定游戏项目。
 
 ```sh
 node skill/scripts/start.mjs --project "/absolute/path/to/game"
 ```
 
-## 怎么用
-
-![动作库用法：①选角色，②点动作播放，③修改这个动作](skill/assets/docs/action-library.jpg)
-
-1. **选角色和动作**：点左上角「关联项目」，或用「＋导入」添加模型；在动作库点卡片播放。GLB 可直接查看，FBX 另需本机 Blender 4.2+。
-2. **提出修改**：点「修改这个动作」，暂停到问题时刻，选部位并写要求。多处问题可逐一「标记当前画面」，一起提交。
-3. **交给 Agent**：默认保存后复制任务到当前对话；也可选「本机后台处理」，使用已配置的 Codex CLI、Claude Code 或 DeepSeek Harness。保存任务后，需有 Agent 领取才会执行。
-4. **比较结果**：同一时刻、同一镜头查看修改前后，选择「采用这版」「继续调整」或「不用这版」。认可后需要放进游戏，再点「接入游戏…」交给 Agent。
-
-![候选评审：①同步对照，②查看修改摘要，③选择采用这版、继续调整或不用这版](skill/assets/docs/candidate-review.jpg)
-
-想先体验流程，可展开「本地微调」，调整摆幅或旋转偏移，试播后生成候选。
-
-项目素材与记录保存在 `<项目>/.motion-studio/`；独立练习默认在 `~/motion-stage-workspace/`。候选单独保存，采用后仍需另行接入游戏。不同骨架的动作需要重定向；普通预览不包含游戏里的布料、IK 或战斗逻辑。
-
-## 安装为 Agent Skill
-
-在仓库根目录运行，选择对应客户端的安装命令（目标目录须不存在）：
+如需在 Codex 中使用 `$motion-stage`，从仓库根目录运行下面的命令，再打开新对话。安装目标须是新目录。Claude Code 的目标目录是 `$HOME/.claude/skills/motion-stage`。在 Windows PowerShell 中用 `$env:USERPROFILE` 表示用户目录。
 
 ```sh
-# Codex
 node skill/scripts/motion-feedback.mjs install --target "$HOME/.codex/skills/motion-stage"
-# Claude Code
-node skill/scripts/motion-feedback.mjs install --target "$HOME/.claude/skills/motion-stage"
 ```
 
-Windows PowerShell 将 `$HOME` 换为 `$env:USERPROFILE`。安装后新开对话，例如「使用 $motion-stage 打开当前项目的动作库」。其他能运行本机工具的 Agent 可按 [SKILL.md](skill/SKILL.md) 使用 CLI / stdio MCP。
+- [启动、导入与排错](skill/references/setup.md) · [动作库](skill/references/action-library.md) · [项目工作区](skill/references/project-workspace.md)
+- [任务流程、CLI 与 MCP](skill/references/agent-workflow.md) · [接入游戏](skill/references/game-integration.md)
 
-## 按需查阅
+## 开发与许可
 
-- [安装、导入与排错](skill/references/setup.md)
-- [动作库](skill/references/action-library.md) · [项目工作区](skill/references/project-workspace.md)
-- [Agent 任务流程](skill/references/agent-workflow.md) · [接入游戏](skill/references/game-integration.md) · [游戏效果预览](skill/references/runtime-preview.md)
+`skill/` 包含应用和 Agent Skill。在仓库根目录运行 `npm --prefix skill test` 执行测试，运行 `python3 tools/package-skill.py` 生成发行包。验证流程见 [CI 文档](tools/ci/README.md)。
 
-## 开发
-
-源码和完整 Skill 都在 `skill/`，无需构建。仓库根目录运行：
-
-```sh
-npm --prefix skill test
-python3 tools/package-skill.py
-```
-
-修改 `skill/` 后需重新打包，并同步 `skill/bundle-manifest.json` 和 `release.json`。发行包在 `dist/`；[CI 说明](tools/ci/README.md)。
-
-## 交流群
-
-微信群 **AI 大航海时代**，扫码加入。本次二维码标注 **11 月 18 日前有效**。
-
-<img src="skill/assets/community/ai-sailing-wechat.png" width="320" alt="AI 大航海时代微信群二维码，11 月 18 日前有效">
-
-## 许可
-
-代码与原创练习资源采用 [MIT](skill/LICENSE)，随包运行时见 [第三方许可](skill/THIRD_PARTY.md)。不包含私人游戏角色或商用动作包。
+本项目基于 [jbang2004/motion-stage](https://github.com/jbang2004/motion-stage)。代码和原创练习资源采用 [MIT 许可](skill/LICENSE)，随包运行时的声明见 [第三方许可](skill/THIRD_PARTY.md)。

@@ -1,7 +1,7 @@
 {
   "name": "motion-stage",
   "version": "4.5.0",
-  "createdAt": "2026-11-15T03:56:30.365472+00:00",
+  "createdAt": "2026-11-15T04:09:15.867724+00:00",
   "runtime": "Node.js >=22 / Canvas2D curves; WebGL2 spatial previews",
   "externalRuntimeDependencies": {
     "base": [],
@@ -32,11 +32,6 @@
       "sha256": "1bd0b830aca421ceceb760d9d28648cae98485b44dfa881932873531635c9292"
     },
     {
-      "path": "assets/community/ai-sailing-wechat.png",
-      "bytes": 217389,
-      "sha256": "c4b437408f1cab1f6803939a3c3a09c8b3ca28ad840583489f265b22ab4ff9f3"
-    },
-    {
       "path": "assets/demo/baseline.glb",
       "bytes": 67800,
       "sha256": "0a1d552d2a7f453c07f7512bb35796bac96394319030f6018527e0ba068b19d5"
@@ -52,14 +47,19 @@
       "sha256": "6e2eb30a908b3aa986fc0153c6d48eeac57e7df8dbb32a080270a6cb15a5d755"
     },
     {
-      "path": "assets/docs/action-library.jpg",
-      "bytes": 111508,
-      "sha256": "a465abf02172a642717d76b40b8f3e61c93fd1aba59a144b87e7916051979dcf"
+      "path": "assets/docs/workbench-candidate-comparison.jpg",
+      "bytes": 168497,
+      "sha256": "3b31f14d90248ee68a57395b5046c30ad9899e53fa218a8301687ef0c1157487"
     },
     {
-      "path": "assets/docs/candidate-review.jpg",
-      "bytes": 143034,
-      "sha256": "aa0e2cd596123d4a45b19b8af5799f801392b6ded12d18808e52c670294fe859"
+      "path": "assets/docs/workbench-frame-annotation.jpg",
+      "bytes": 64025,
+      "sha256": "9f7f2804d83ff39a67c038ade57f8eb4d87fb1fbfe35cdc628de36fa6ac83d5d"
+    },
+    {
+      "path": "assets/docs/workbench-motion-library.jpg",
+      "bytes": 132866,
+      "sha256": "14d1f74efd5450e4285f1880f2185696c3c126058021f9317e0f31c2ff01870d"
     },
     {
       "path": "assets/templates/feedback-fields.md",
@@ -473,8 +473,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 2791,
-      "sha256": "dc8a6de528936d73ef194a1ec5fd8b5043ea77095e875d5b7f6499f77fc5f254"
+      "bytes": 2232,
+      "sha256": "62b2eba5d19df74792f73d8cbcc67e60e55777b9e6276e1c6c059b7c19e902ac"
     },
     {
       "path": "references/action-library.md",

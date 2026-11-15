@@ -1,60 +1,38 @@
-<img src="assets/viewer/app-icon.svg" width="88" alt="动作台 MotionStage">
+# MotionStage 动作台
 
-# 动作台 MotionStage
+在本地浏览器里查看角色动作、检查网格、在指定时刻画批注，再并排审阅修改候选。
 
-本地 3D 角色动作工作台：查看动作、标记问题、交给 Agent 修改，再并排比较原版和候选。
+![新版 MotionStage 动作库，包含角色列表、预览、时间轴和动作卡片](assets/docs/workbench-motion-library.jpg)
 
 ## 启动
 
-需要 **Node.js 22+** 和支持 **WebGL2** 的浏览器，无需 `npm install`。在本文件所在目录运行：
+在此目录运行以下命令。需要 **Node.js 22+** 和支持 **WebGL2** 的浏览器。Windows 可双击 `Open MotionStage.cmd`，macOS 可双击 `Open MotionStage.command`。
 
 ```sh
 node scripts/start.mjs
 ```
 
-macOS 也可双击 `Open MotionStage.command`，Windows 双击 `Open MotionStage.cmd`。首次启动自带练习人偶；保持终端运行，`Ctrl+C` 停止。
+首次启动会载入练习人偶。导入 FBX 另需 **Blender 4.2+**。右上角「…」→「界面语言」可切换简体中文和 English。
 
-打开自己的项目：
+## 审阅动作
 
-```sh
-node scripts/start.mjs --project "/absolute/path/to/game"
-```
+1. 在动作库选择角色和动作，暂停在目标时刻。左键拖动旋转，中键拖动平移，滚轮缩放。可调整预览高度、全屏查看或打开线框。
+2. 点击「画笔批注」，在冻结画面上画线、箭头或圈选，填写修改说明。将一个或多个标记一起保存并交给 Agent。只需数值调整时，也可用「本地微调」生成候选。
+3. 候选返回后并排比较，选择「采用这版」「继续调整」或「不用这版」。
 
-项目记录保存在 `<项目>/.motion-studio/`；独立练习默认在 `~/motion-stage-workspace/`。
+![新版候选对照界面，原动作和本地微调候选并排显示](assets/docs/workbench-candidate-comparison.jpg)
 
-## 使用
+独立工作区默认在 `~/motion-stage-workspace/`。运行 `node scripts/start.mjs --project "/absolute/path/to/game"` 可打开项目工作区 `<项目>/.motion-studio/`。
 
-![动作库用法：①选角色，②点动作播放，③修改这个动作](assets/docs/action-library.jpg)
+## 安装为 Agent Skill
 
-1. 「关联项目」或「＋导入」添加角色，在动作库点卡片播放。GLB 直接查看；FBX 需要本机 Blender 4.2+。
-2. 点「修改这个动作」，暂停、选部位、写要求；多处问题可逐一「标记当前画面」。
-3. 保存后复制任务给当前 Agent 对话，或选「本机后台处理」，使用已配置的 Codex CLI、Claude Code 或 DeepSeek Harness。
-4. 候选返回后并排比较，选择「采用这版」「继续调整」或「不用这版」。放进游戏需另点「接入游戏…」。
-
-![候选评审：①同步对照，②查看修改摘要，③选择采用这版、继续调整或不用这版](assets/docs/candidate-review.jpg)
-
-无需 AI 也能展开「本地微调」，试播摆幅或旋转偏移并生成候选。不同骨架需要重定向；正式效果仍需在游戏中检查。
-
-## 安装成 Skill（可选）
-
-在本文件所在目录运行，目标目录须不存在：
+从此目录运行以下命令，然后在新对话调用 `$motion-stage`。安装目标须是新目录。Claude Code 的目标目录是 `$HOME/.claude/skills/motion-stage`。在 Windows PowerShell 中用 `$env:USERPROFILE` 表示用户目录。
 
 ```sh
 node scripts/motion-feedback.mjs install --target "$HOME/.codex/skills/motion-stage"
 ```
 
-Claude Code 将目标换为 `$HOME/.claude/skills/motion-stage`；Windows PowerShell 将 `$HOME` 换为 `$env:USERPROFILE`。安装后新开对话调用 `$motion-stage`。
+- [安装与排错](references/setup.md) · [动作库](references/action-library.md)
+- [Skill 入口](SKILL.md) · [任务流程与 CLI / MCP](references/agent-workflow.md) · [接入游戏](references/game-integration.md)
 
-## 文档
-
-- [安装与排错](references/setup.md) · [动作库](references/action-library.md) · [项目工作区](references/project-workspace.md)
-- [Agent 入口](SKILL.md) · [任务流程与 CLI / MCP](references/agent-workflow.md)
-- [接入游戏](references/game-integration.md) · [游戏效果预览](references/runtime-preview.md)
-
-## 交流群
-
-微信群 **AI 大航海时代**，扫码加入。本次二维码标注 **11 月 18 日前有效**。
-
-<img src="assets/community/ai-sailing-wechat.png" width="320" alt="AI 大航海时代微信群二维码，11 月 18 日前有效">
-
-代码与原创练习资源见 [MIT 许可](LICENSE)，随包运行时见 [第三方许可](THIRD_PARTY.md)。
+基于 [jbang2004/motion-stage](https://github.com/jbang2004/motion-stage)。代码与原创练习资源采用 [MIT 许可](LICENSE)，另见 [第三方许可](THIRD_PARTY.md)。
